@@ -1,0 +1,6 @@
+{
+  "name": "Diski Football",
+  "description": "South African Football game featuring PSL and NFD leagues, MTN8, Carling Knockout, and Nedbank Cup with manager mode and match gameplay.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
