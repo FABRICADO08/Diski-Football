@@ -32,6 +32,12 @@ interface PlayerDao {
     @Query("SELECT COUNT(*) FROM players")
     suspend fun getPlayerCount(): Int
 
+    @Query("SELECT * FROM players WHERE teamId != :excludeTeamId ORDER BY overall DESC LIMIT 60")
+    fun getTransferMarketPlayers(excludeTeamId: String): Flow<List<PlayerEntity>>
+
+    @Query("SELECT * FROM players ORDER BY overall DESC LIMIT 60")
+    fun getAllMarketPlayers(): Flow<List<PlayerEntity>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(players: List<PlayerEntity>)
 

@@ -17,6 +17,7 @@ val SurfaceCardHighlight = Color(0xFF24332D)
 val AccentOrange = Color(0xFFFF6D00)
 val AccentRed = Color(0xFFD32F2F)
 val AccentBlue = Color(0xFF1976D2)
+val AccentCyan = Color(0xFF00E5FF)
 
 val TextPrimary = Color(0xFFF1F5F2)
 val TextSecondary = Color(0xFFA5B7AC)

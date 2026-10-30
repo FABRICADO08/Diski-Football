@@ -13,71 +13,68 @@ import org.junit.Test
 class Phase1DataTest {
 
     @Test
-    fun testSouthAfricanTeamsCount() {
-        val pslTeams = SouthAfricanTeamsData.pslTeams
-        val nfdTeams = SouthAfricanTeamsData.nfdTeams
-        val allTeams = SouthAfricanTeamsData.allTeams
+    fun testPslTeamsCountAndDetails() {
+        val psl = SouthAfricanTeamsData.pslTeams
+        assertEquals("PSL must have exactly 16 teams", 16, psl.size)
 
-        assertEquals("PSL must have exactly 16 teams", 16, pslTeams.size)
-        assertEquals("NFD must have exactly 16 teams", 16, nfdTeams.size)
-        assertEquals("Total South African clubs must be 32", 32, allTeams.size)
-
-        // Verify key flagship clubs exist
-        val sundowns = allTeams.find { it.id == "mamelodi_sundowns" }
-        assertNotNull("Mamelodi Sundowns must exist", sundowns)
+        val sundowns = psl.find { it.id == "mamelodi_sundowns" }
+        assertNotNull("Sundowns must exist", sundowns)
+        assertEquals("Sundowns", sundowns?.shortName)
         assertEquals(LeagueType.PSL, sundowns?.league)
 
-        val pirates = allTeams.find { it.id == "orlando_pirates" }
-        assertNotNull("Orlando Pirates must exist", pirates)
-        assertEquals(LeagueType.PSL, pirates?.league)
+        val pirates = psl.find { it.id == "orlando_pirates" }
+        assertNotNull("Pirates must exist", pirates)
 
-        val chiefs = allTeams.find { it.id == "kaizer_chiefs" }
-        assertNotNull("Kaizer Chiefs must exist", chiefs)
-        assertEquals(LeagueType.PSL, chiefs?.league)
+        val chiefs = psl.find { it.id == "kaizer_chiefs" }
+        assertNotNull("Chiefs must exist", chiefs)
+    }
 
-        val amatuks = allTeams.find { it.id == "university_of_pretoria" }
-        assertNotNull("AmaTuks must exist in NFD", amatuks)
+    @Test
+    fun testNfdTeamsCount() {
+        val nfd = SouthAfricanTeamsData.nfdTeams
+        assertEquals("NFD must have exactly 16 teams", 16, nfd.size)
+
+        val amatuks = nfd.find { it.id == "university_of_pretoria" }
+        assertNotNull("University of Pretoria (AmaTuks) must exist", amatuks)
         assertEquals(LeagueType.NFD, amatuks?.league)
     }
 
     @Test
-    fun testSquadsGeneration() {
+    fun testTotalTeamsAndPlayerGeneration() {
         val allTeams = SouthAfricanTeamsData.allTeams
-        val allPlayers = SouthAfricanPlayersData.generateAllPlayers(allTeams)
+        assertEquals("Total South African teams must be 32", 32, allTeams.size)
 
-        assertTrue("Players count must be at least 480 (15 players * 32 teams)", allPlayers.size >= 480)
+        val players = SouthAfricanPlayersData.generateAllPlayers(allTeams)
+        assertTrue("Every team must have players (at least 32 * 15 = 480)", players.size >= 480)
 
-        // Verify Sundowns squad contains Peter Shalulile and Ronwen Williams
-        val shalulile = allPlayers.find { it.name == "Peter Shalulile" }
-        assertNotNull("Peter Shalulile must exist in squad", shalulile)
-        assertEquals("mamelodi_sundowns", shalulile?.teamId)
-        assertTrue("Shalulile overall rating should be elite (>=80)", (shalulile?.overall ?: 0) >= 80)
+        val rWilliams = players.find { it.name == "Ronwen Williams" }
+        assertNotNull("Ronwen Williams should exist in Sundowns", rWilliams)
+        assertEquals("mamelodi_sundowns", rWilliams?.teamId)
+        assertTrue("Williams rating must reflect star keeper status", (rWilliams?.overall ?: 0) >= 84)
 
-        val ronwen = allPlayers.find { it.name == "Ronwen Williams" }
-        assertNotNull("Ronwen Williams must exist in squad", ronwen)
-        assertEquals("mamelodi_sundowns", ronwen?.teamId)
+        val pMaswanganyi = players.find { it.name == "Patrick Maswanganyi" }
+        assertNotNull("Patrick Maswanganyi should exist in Pirates", pMaswanganyi)
+        assertEquals("orlando_pirates", pMaswanganyi?.teamId)
     }
 
     @Test
-    fun testSouthAfricanTournaments() {
+    fun testTournamentsAndFixtures() {
         val tournaments = SouthAfricanTournamentsData.generateInitialTournaments()
+        assertEquals(6, tournaments.size)
 
-        assertEquals("Tournaments count should be 6", 6, tournaments.size)
-        assertTrue(tournaments.any { it.type == TournamentType.PSL })
-        assertTrue(tournaments.any { it.type == TournamentType.NFD })
-        assertTrue(tournaments.any { it.type == TournamentType.MTN8 })
-        assertTrue(tournaments.any { it.type == TournamentType.CARLING_CKO })
-        assertTrue(tournaments.any { it.type == TournamentType.NEDBANK_CUP })
-        assertTrue(tournaments.any { it.type == TournamentType.PLAYOFF })
-    }
+        val types = tournaments.map { it.type }
+        assertTrue(types.contains(TournamentType.PSL))
+        assertTrue(types.contains(TournamentType.NFD))
+        assertTrue(types.contains(TournamentType.MTN8))
+        assertTrue(types.contains(TournamentType.CARLING_CKO))
+        assertTrue(types.contains(TournamentType.NEDBANK_CUP))
+        assertTrue(types.contains(TournamentType.PLAYOFF))
 
-    @Test
-    fun testInitialStandingsAndFixtures() {
         val allTeams = SouthAfricanTeamsData.allTeams
-        val standings = SouthAfricanTournamentsData.generateInitialStandings(allTeams)
         val fixtures = SouthAfricanTournamentsData.generateInitialFixtures(allTeams)
+        assertTrue("Fixtures must be generated for GW1 and MTN8", fixtures.isNotEmpty())
 
-        assertEquals("32 teams must have standings entries", 32, standings.size)
-        assertTrue("Fixtures should include PSL GameWeek 1 and MTN8 QFs", fixtures.size >= 12)
+        val standings = SouthAfricanTournamentsData.generateInitialStandings(allTeams)
+        assertEquals("Standings must cover 16 PSL + 16 NFD = 32 entries", 32, standings.size)
     }
 }

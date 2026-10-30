@@ -43,6 +43,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.example.data.model.PlayerEntity
 import com.example.data.model.TeamEntity
 import com.example.ui.theme.AccentOrange
+import com.example.ui.theme.AccentRed
 import com.example.ui.theme.DiskiGold
 import com.example.ui.theme.PitchGreen
 import com.example.ui.theme.RatingHigh

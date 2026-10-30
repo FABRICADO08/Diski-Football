@@ -34,6 +34,9 @@ interface StandingDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(standings: List<StandingEntity>)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(standing: StandingEntity)
+
     @Update
     suspend fun update(standing: StandingEntity)
 }

@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SportsSoccer
@@ -59,8 +60,12 @@ import com.example.ui.theme.TextSecondary
 @Composable
 fun Phase1Screen(
     viewModel: Phase1ViewModel,
+    onBackToMenu: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    if (onBackToMenu != null) {
+        androidx.activity.compose.BackHandler { onBackToMenu() }
+    }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val pslTeams by viewModel.pslTeams.collectAsStateWithLifecycle()
     val nfdTeams by viewModel.nfdTeams.collectAsStateWithLifecycle()
@@ -78,7 +83,7 @@ fun Phase1Screen(
                 .padding(innerPadding)
         ) {
             // Header Bar
-            Phase1Header()
+            Phase1Header(onBackToMenu = onBackToMenu)
 
             // Tab Row
             val tabs = listOf(
@@ -197,7 +202,7 @@ fun Phase1Screen(
 }
 
 @Composable
-private fun Phase1Header() {
+private fun Phase1Header(onBackToMenu: (() -> Unit)? = null) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -206,6 +211,16 @@ private fun Phase1Header() {
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
+            if (onBackToMenu != null) {
+                IconButton(onClick = onBackToMenu) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = TextPrimary
+                    )
+                }
+                Spacer(modifier = Modifier.width(4.dp))
+            }
             Box(
                 modifier = Modifier
                     .size(44.dp)
