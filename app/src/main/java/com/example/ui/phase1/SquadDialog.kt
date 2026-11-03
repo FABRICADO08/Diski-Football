@@ -42,6 +42,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.data.model.PlayerEntity
 import com.example.data.model.TeamEntity
+import com.example.ui.components.DiskiClubBadge
 import com.example.ui.theme.AccentOrange
 import com.example.ui.theme.AccentRed
 import com.example.ui.theme.DiskiGold
@@ -94,21 +95,7 @@ fun SquadDialog(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .background(primaryColor)
-                                .border(2.dp, secondaryColor, CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = team.abbreviation.take(3),
-                                color = secondaryColor,
-                                fontWeight = FontWeight.Black,
-                                fontSize = 14.sp
-                            )
-                        }
+                        DiskiClubBadge(team = team, size = 48.dp)
 
                         Spacer(modifier = Modifier.width(12.dp))
 
@@ -187,12 +174,31 @@ fun SquadDialog(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                Text(
-                    text = "OFFICIAL SQUAD ROSTER (${squad.size} Players)",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = DiskiGold
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "OFFICIAL 2026/2027 SQUAD (${squad.size} Players)",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = DiskiGold
+                    )
+                    Surface(
+                        color = PitchGreen.copy(alpha = 0.2f),
+                        shape = RoundedCornerShape(8.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, PitchGreen)
+                    ) {
+                        Text(
+                            text = "2026/2027 Season",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = PitchGreen,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                        )
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(8.dp))
 

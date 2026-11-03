@@ -50,17 +50,61 @@ class Phase1DataTest {
         val rWilliams = players.find { it.name == "Ronwen Williams" }
         assertNotNull("Ronwen Williams should exist in Sundowns", rWilliams)
         assertEquals("mamelodi_sundowns", rWilliams?.teamId)
-        assertTrue("Williams rating must reflect star keeper status", (rWilliams?.overall ?: 0) >= 84)
+        assertTrue("Williams rating must reflect star keeper status", (rWilliams?.overall ?: 0) >= 85)
 
         val pMaswanganyi = players.find { it.name == "Patrick Maswanganyi" }
         assertNotNull("Patrick Maswanganyi should exist in Pirates", pMaswanganyi)
         assertEquals("orlando_pirates", pMaswanganyi?.teamId)
+
+        // 2026/2027 Season Star & Prodigy Assertions
+        val rMofokeng = players.find { it.name == "Relebohile Mofokeng" }
+        assertNotNull("Relebohile Mofokeng must be in Pirates squad", rMofokeng)
+        assertEquals("orlando_pirates", rMofokeng?.teamId)
+        assertEquals("Mofokeng 2026/2027 age", 21, rMofokeng?.age)
+        assertTrue("Mofokeng superstar overall", (rMofokeng?.overall ?: 0) >= 85)
+
+        val mNkota = players.find { it.name == "Mohau Nkota" }
+        assertNotNull("Mohau Nkota must be in Pirates squad", mNkota)
+        assertEquals("orlando_pirates", mNkota?.teamId)
+
+        val mShabalala = players.find { it.name == "Mduduzi Shabalala" }
+        assertNotNull("Mduduzi Shabalala must be in Chiefs squad", mShabalala)
+        assertEquals("kaizer_chiefs", mShabalala?.teamId)
+        assertTrue("Shabalala 2026/2027 rating", (mShabalala?.overall ?: 0) >= 82)
+
+        val mVilakazi = players.find { it.name == "Mfundo Vilakazi" }
+        assertNotNull("Mfundo Vilakazi must be in Chiefs squad", mVilakazi)
+        assertEquals("kaizer_chiefs", mVilakazi?.teamId)
+
+        val rDortley = players.find { it.name == "Rushwin Dortley" }
+        assertNotNull("Rushwin Dortley must be in Chiefs squad", rDortley)
+        assertEquals("kaizer_chiefs", rDortley?.teamId)
+
+        val iRayners = players.find { it.name == "Iqraam Rayners" }
+        assertNotNull("Iqraam Rayners must be in Sundowns squad", iRayners)
+        assertEquals("mamelodi_sundowns", iRayners?.teamId)
+        assertTrue("Rayners is starting XI in 2026/2027", iRayners?.isStartingEleven == true)
+
+        val oAppollis = players.find { it.name == "Oswin Appollis" }
+        assertNotNull("Oswin Appollis must be in Polokwane City squad", oAppollis)
+        assertEquals("polokwane_city", oAppollis?.teamId)
+        assertTrue("Appollis rating", (oAppollis?.overall ?: 0) >= 83)
+
+        val sNwabali = players.find { it.name == "Stanley Nwabali" }
+        assertNotNull("Stanley Nwabali must be in Chippa United squad", sNwabali)
+        assertEquals("chippa_united", sNwabali?.teamId)
+        assertTrue("Nwabali rating", (sNwabali?.overall ?: 0) >= 82)
+
+        val eChipezeze = players.find { it.name == "Elvis Chipezeze" }
+        assertNotNull("Elvis Chipezeze must be in Magesi squad", eChipezeze)
+        assertEquals("magesi_fc", eChipezeze?.teamId)
+        assertTrue("Chipezeze 2024 CKO Champion captain rating", (eChipezeze?.overall ?: 0) >= 80)
     }
 
     @Test
     fun testTournamentsAndFixtures() {
         val tournaments = SouthAfricanTournamentsData.generateInitialTournaments()
-        assertEquals(6, tournaments.size)
+        assertEquals(7, tournaments.size)
 
         val types = tournaments.map { it.type }
         assertTrue(types.contains(TournamentType.PSL))
@@ -69,6 +113,7 @@ class Phase1DataTest {
         assertTrue(types.contains(TournamentType.CARLING_CKO))
         assertTrue(types.contains(TournamentType.NEDBANK_CUP))
         assertTrue(types.contains(TournamentType.PLAYOFF))
+        assertTrue(types.contains(TournamentType.CARLING_BLACK_LABEL))
 
         val allTeams = SouthAfricanTeamsData.allTeams
         val fixtures = SouthAfricanTournamentsData.generateInitialFixtures(allTeams)

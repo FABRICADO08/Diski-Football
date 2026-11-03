@@ -48,6 +48,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.TeamEntity
+import com.example.ui.components.DiskiClubBadge
 import com.example.ui.theme.AccentOrange
 import com.example.ui.theme.DiskiGold
 import com.example.ui.theme.PitchGreen
@@ -65,8 +66,8 @@ fun QuickMatchSetupScreen(
     allTeams: List<TeamEntity>,
     onBack: () -> Unit,
     onSimulateQuickMatch: (homeTeamId: String, awayTeamId: String) -> Unit,
-    onPlayQuickMatch: (homeTeamId: String, awayTeamId: String) -> Unit = { _, _ -> },
-    onPlayPenaltyShootout: (homeTeamId: String, awayTeamId: String) -> Unit = { _, _ -> },
+    onPlayQuickMatch: (homeTeamId: String, awayTeamId: String, durationSecs: Float, difficulty: String) -> Unit = { _, _, _, _ -> },
+    onPlayPenaltyShootout: (homeTeamId: String, awayTeamId: String, isTwoPlayer: Boolean) -> Unit = { _, _, _ -> },
     modifier: Modifier = Modifier
 ) {
     BackHandler { onBack() }
@@ -76,6 +77,7 @@ fun QuickMatchSetupScreen(
     var halfLength by remember { mutableStateOf("5 min") }
     var difficulty by remember { mutableStateOf("Medium") }
     var timeOfDay by remember { mutableStateOf("Night (Floodlights)") }
+    var isTwoPlayerMode by remember { mutableStateOf(false) }
 
     val homeTeam = allTeams.find { it.id == homeTeamId } ?: allTeams.firstOrNull()
     val awayTeam = allTeams.find { it.id == awayTeamId } ?: allTeams.getOrNull(1)
@@ -97,7 +99,14 @@ fun QuickMatchSetupScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Button(
-                            onClick = { onPlayQuickMatch(homeTeamId, awayTeamId) },
+                            onClick = {
+                                val duration = when (halfLength) {
+                                    "3 min" -> 180f
+                                    "10 min" -> 600f
+                                    else -> 300f
+                                }
+                                onPlayQuickMatch(homeTeamId, awayTeamId, duration, difficulty)
+                            },
                             modifier = Modifier
                                 .weight(1.2f)
                                 .testTag("btn_play_pitch_quick_match"),
@@ -110,14 +119,19 @@ fun QuickMatchSetupScreen(
                         }
 
                         Button(
-                            onClick = { onPlayPenaltyShootout(homeTeamId, awayTeamId) },
+                            onClick = { onPlayPenaltyShootout(homeTeamId, awayTeamId, isTwoPlayerMode) },
                             modifier = Modifier
-                                .weight(1.1f)
+                                .weight(1.2f)
                                 .testTag("btn_quick_penalties"),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00B0FF)),
+                            colors = ButtonDefaults.buttonColors(containerColor = if (isTwoPlayerMode) Color(0xFFFF9100) else Color(0xFF00B0FF)),
                             shape = RoundedCornerShape(12.dp)
                         ) {
-                            Text("Penalties", color = Color.White, fontWeight = FontWeight.Black, fontSize = 12.sp)
+                            Text(
+                                text = if (isTwoPlayerMode) "1v1 Penalties" else "Penalties",
+                                color = Color.White,
+                                fontWeight = FontWeight.Black,
+                                fontSize = 12.sp
+                            )
                         }
 
                         Button(
@@ -223,6 +237,58 @@ fun QuickMatchSetupScreen(
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text("MATCH SETTINGS", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = DiskiGold)
 
+                        Text("Game Mode / Players", fontSize = 11.sp, color = TextSecondary)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FilterChip(
+                                selected = !isTwoPlayerMode,
+                                onClick = { isTwoPlayerMode = false },
+                                label = { Text("1 Player (vs CPU)") },
+                                modifier = Modifier.testTag("chip_mode_1player"),
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = PitchGreen,
+                                    selectedLabelColor = DiskiGold,
+                                    containerColor = SurfaceCardHighlight,
+                                    labelColor = TextSecondary
+                                )
+                            )
+                            FilterChip(
+                                selected = isTwoPlayerMode,
+                                onClick = { isTwoPlayerMode = true },
+                                label = { Text("2 Players (Pass & Play)") },
+                                modifier = Modifier.testTag("chip_mode_2players"),
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = Color(0xFFFF9100),
+                                    selectedLabelColor = Color.White,
+                                    containerColor = SurfaceCardHighlight,
+                                    labelColor = TextSecondary
+                                )
+                            )
+                        }
+
+                        if (isTwoPlayerMode) {
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = Color(0x33FF9100),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFF9100)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(modifier = Modifier.padding(10.dp)) {
+                                    Text(
+                                        text = "🎮 2-PLAYER PASS & PLAY ACTIVE",
+                                        fontWeight = FontWeight.Black,
+                                        fontSize = 11.sp,
+                                        color = Color(0xFFFFB74D)
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = "Player 1: ${homeTeam?.shortName ?: "Home"} | Player 2: ${awayTeam?.shortName ?: "Away"}\nTap '1v1 Penalties' below to launch head-to-head spot kicks!",
+                                        fontSize = 10.sp,
+                                        color = TextPrimary
+                                    )
+                                }
+                            }
+                        }
+
                         Text("Half Length", fontSize = 11.sp, color = TextSecondary)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             listOf("3 min", "5 min", "10 min").forEach { len ->
@@ -311,15 +377,18 @@ private fun ClubBadgeBlock(team: TeamEntity?, label: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(text = label, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TextMuted)
         Spacer(modifier = Modifier.height(4.dp))
-        Box(
-            modifier = Modifier
-                .size(54.dp)
-                .clip(CircleShape)
-                .background(pColor)
-                .border(2.dp, Color.White, CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(text = team?.abbreviation?.take(3) ?: "ZA", color = Color.White, fontWeight = FontWeight.Black, fontSize = 14.sp)
+        if (team != null) {
+            DiskiClubBadge(team = team, size = 56.dp)
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(CircleShape)
+                    .background(DiskiGold),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = "ZA", color = SurfaceDark, fontWeight = FontWeight.Black, fontSize = 14.sp)
+            }
         }
         Spacer(modifier = Modifier.height(6.dp))
         Text(text = team?.shortName ?: "Club", fontWeight = FontWeight.Black, fontSize = 14.sp, color = TextPrimary)

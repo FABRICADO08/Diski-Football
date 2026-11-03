@@ -57,6 +57,14 @@ object SouthAfricanTournamentsData {
             season = 2026,
             currentRound = "Play-off Mini-League",
             bracketData = """{"format": "3-Team Round Robin (15th PSL vs 2nd & 3rd NFD)"}"""
+        ),
+        TournamentEntity(
+            id = "cbl_2026",
+            type = TournamentType.CARLING_BLACK_LABEL,
+            name = "Carling Black Label Cup",
+            season = 2026,
+            currentRound = "Semi-Finals",
+            bracketData = """{"participants": 4, "format": "Fan-Voted Pre-season Spectacle (Soweto Derby & Mzansi Giants)"}"""
         )
     )
 
@@ -155,6 +163,44 @@ object SouthAfricanTournamentsData {
                 )
             )
         }
+
+        // Carling Black Label Cup (Soweto Derby & Mzansi Giants)
+        matches.add(
+            MatchEntity(
+                id = "cbl_2026_sf1",
+                homeTeamId = "kaizer_chiefs",
+                awayTeamId = "orlando_pirates",
+                tournamentType = TournamentType.CARLING_BLACK_LABEL,
+                gameWeek = 1,
+                stage = "Semi-Final 1 (Soweto Derby • FNB Stadium)",
+                seasonYear = 2026,
+                status = MatchStatus.SCHEDULED
+            )
+        )
+        matches.add(
+            MatchEntity(
+                id = "cbl_2026_sf2",
+                homeTeamId = "mamelodi_sundowns",
+                awayTeamId = "amazulu_fc",
+                tournamentType = TournamentType.CARLING_BLACK_LABEL,
+                gameWeek = 1,
+                stage = "Semi-Final 2 (Mzansi Showdown • FNB Stadium)",
+                seasonYear = 2026,
+                status = MatchStatus.SCHEDULED
+            )
+        )
+        matches.add(
+            MatchEntity(
+                id = "cbl_2026_final",
+                homeTeamId = "kaizer_chiefs",
+                awayTeamId = "mamelodi_sundowns",
+                tournamentType = TournamentType.CARLING_BLACK_LABEL,
+                gameWeek = 2,
+                stage = "Grand Final (Champion of Champions)",
+                seasonYear = 2026,
+                status = MatchStatus.SCHEDULED
+            )
+        )
 
         return matches
     }

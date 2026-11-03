@@ -53,6 +53,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.TeamEntity
+import com.example.ui.components.DiskiClubBadge
 import com.example.game.sound.DiskiAudioAndHaptics
 import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.DiskiGold
@@ -84,6 +85,7 @@ fun PenaltyShootoutScreen(
     awayTeam: TeamEntity,
     onFinished: (homeScore: Int, awayScore: Int) -> Unit,
     onExit: () -> Unit,
+    isTwoPlayerMode: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -100,7 +102,12 @@ fun PenaltyShootoutScreen(
 
     var isShootoutOver by remember { mutableStateOf(false) }
     var winnerName by remember { mutableStateOf<String?>(null) }
-    var commentaryText by remember { mutableStateOf("Welcome to the South African Penalty Shootout! Sudden death pressure!") }
+    var commentaryText by remember {
+        mutableStateOf(
+            if (isTwoPlayerMode) "1v1 MZANSI SHOWDOWN! Player 1 (${homeTeam.shortName}) vs Player 2 (${awayTeam.shortName})!"
+            else "Welcome to the South African Penalty Shootout! Sudden death pressure!"
+        )
+    }
 
     // Aim Reticle & Ball Animation
     var aimX by remember { mutableFloatStateOf(0.5f) } // 0.0 (left) to 1.0 (right)
@@ -125,7 +132,8 @@ fun PenaltyShootoutScreen(
 
     // Aim oscillating reticle loop
     LaunchedEffect(isAimingActive, currentTurn) {
-        if (isAimingActive && currentTurn == PenaltyTurnType.USER_KICKING) {
+        val canAim = isAimingActive && (currentTurn == PenaltyTurnType.USER_KICKING || isTwoPlayerMode)
+        if (canAim) {
             var time = 0f
             while (isAimingActive) {
                 withFrameNanos {
@@ -181,15 +189,27 @@ fun PenaltyShootoutScreen(
                     homeScore++
                     audioHaptics.playGoalRoar()
                     audioHaptics.hapticGoalScored()
-                    commentaryText = "LADUMA! ${homeTeam.shortName} score! Emphatic penalty strike!"
+                    commentaryText = if (isTwoPlayerMode) {
+                        "GOAL! PLAYER 1 (${homeTeam.shortName}) scores an ice-cold spot kick!"
+                    } else {
+                        "LADUMA! ${homeTeam.shortName} score! Emphatic penalty strike!"
+                    }
                 } else if (result == PenaltyShotResult.SAVED) {
                     audioHaptics.playPostHitSound()
                     audioHaptics.hapticPostHit()
-                    commentaryText = "SAVED! The goalkeeper guesses right and blocks the penalty!"
+                    commentaryText = if (isTwoPlayerMode) {
+                        "SAVED! Player 2's goalkeeper denies Player 1 (${homeTeam.shortName})!"
+                    } else {
+                        "SAVED! The goalkeeper guesses right and blocks the penalty!"
+                    }
                 } else {
                     audioHaptics.playPostHitSound()
                     audioHaptics.hapticPostHit()
-                    commentaryText = "OFF TARGET! Put wide into the stands!"
+                    commentaryText = if (isTwoPlayerMode) {
+                        "MISSED! Player 1 (${homeTeam.shortName}) puts it wide of the post!"
+                    } else {
+                        "OFF TARGET! Put wide into the stands!"
+                    }
                 }
             } else {
                 val scored = (result == PenaltyShotResult.GOAL)
@@ -198,14 +218,26 @@ fun PenaltyShootoutScreen(
                     awayScore++
                     audioHaptics.playGoalRoar()
                     audioHaptics.hapticGoalScored()
-                    commentaryText = "GOAL! ${awayTeam.shortName} convert their spot kick with ice in their veins!"
+                    commentaryText = if (isTwoPlayerMode) {
+                        "GOAL! PLAYER 2 (${awayTeam.shortName}) buries the penalty with power!"
+                    } else {
+                        "GOAL! ${awayTeam.shortName} convert their spot kick with ice in their veins!"
+                    }
                 } else if (result == PenaltyShotResult.SAVED) {
                     audioHaptics.playPostHitSound()
                     audioHaptics.hapticGoalScored()
-                    commentaryText = "WHAT A SAVE! You denied ${awayTeam.shortName}!"
+                    commentaryText = if (isTwoPlayerMode) {
+                        "WHAT A SAVE! Player 1's goalkeeper denies Player 2 (${awayTeam.shortName})!"
+                    } else {
+                        "WHAT A SAVE! You denied ${awayTeam.shortName}!"
+                    }
                 } else {
                     audioHaptics.playPostHitSound()
-                    commentaryText = "MISSED! ${awayTeam.shortName} send it wide of the post!"
+                    commentaryText = if (isTwoPlayerMode) {
+                        "MISSED! Player 2 (${awayTeam.shortName}) blazes it wide!"
+                    } else {
+                        "MISSED! ${awayTeam.shortName} send it wide of the post!"
+                    }
                 }
             }
 
@@ -222,11 +254,20 @@ fun PenaltyShootoutScreen(
                 onGameOver = { winner ->
                     isShootoutOver = true
                     winnerName = winner
+                    isBallInFlight = false
+                    ballProgress = 0f
                 },
                 onNextTurn = { nextTurn, nextRound ->
                     currentTurn = nextTurn
                     currentRound = nextRound
-                    resetForNextKick(nextTurn)
+                    ballProgress = 0f
+                    gkDiveProgress = 0f
+                    gkDiveCurrentX = 0f
+                    gkDiveTargetX = 0f
+                    isAimingActive = true
+                    isChargingPower = false
+                    shotPower = 0.4f
+                    isBallInFlight = false
                 }
             )
         }
@@ -243,6 +284,26 @@ fun PenaltyShootoutScreen(
         ballTargetY = (aimY + devY).coerceIn(0.1f, 0.9f)
 
         // Goalkeeper AI guess: Left (-1), Center (0), Right (+1)
+        val gkChoices = listOf(-1f, -0.6f, 0f, 0.6f, 1f)
+        gkDiveTargetX = gkChoices.random()
+
+        audioHaptics.playKickSound(isHardShot = shotPower > 0.7f)
+        audioHaptics.hapticBallKick()
+
+        isBallInFlight = true
+    }
+
+    fun startPlayer2Shot() {
+        if (!isAimingActive || isBallInFlight) return
+        isAimingActive = false
+
+        // Player 2 aiming deviation
+        val devX = (Random.nextFloat() - 0.5f) * (shotPower * 0.25f)
+        val devY = (Random.nextFloat() - 0.5f) * (shotPower * 0.25f)
+        ballTargetX = (aimX + devX).coerceIn(0.05f, 0.95f)
+        ballTargetY = (aimY + devY).coerceIn(0.1f, 0.9f)
+
+        // Player 1 Goalkeeper dive attempt
         val gkChoices = listOf(-1f, -0.6f, 0f, 0.6f, 1f)
         gkDiveTargetX = gkChoices.random()
 
@@ -283,7 +344,7 @@ fun PenaltyShootoutScreen(
                 isBallInFlight = isBallInFlight,
                 aimX = aimX,
                 aimY = aimY,
-                showAimReticle = (currentTurn == PenaltyTurnType.USER_KICKING && isAimingActive)
+                showAimReticle = ((currentTurn == PenaltyTurnType.USER_KICKING || isTwoPlayerMode) && isAimingActive)
             )
         }
 
@@ -305,10 +366,25 @@ fun PenaltyShootoutScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "PENALTY SHOOTOUT",
+                        text = if (isTwoPlayerMode) "1v1 PASS & PLAY SHOOTOUT" else "PENALTY SHOOTOUT",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Black,
                         color = DiskiGold
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    val turnBannerText = if (isTwoPlayerMode) {
+                        if (currentTurn == PenaltyTurnType.USER_KICKING) "🎮 PLAYER 1 (${homeTeam.shortName})'S TURN TO KICK"
+                        else "🎮 PLAYER 2 (${awayTeam.shortName})'S TURN TO KICK"
+                    } else {
+                        if (currentTurn == PenaltyTurnType.USER_KICKING) "ROUND $currentRound - YOUR SPOT KICK"
+                        else "ROUND $currentRound - DEFEND YOUR GOAL"
+                    }
+                    Text(
+                        text = turnBannerText,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = if (currentTurn == PenaltyTurnType.USER_KICKING) DiskiGold else Color(0xFFFF9100)
                     )
                     Spacer(modifier = Modifier.height(6.dp))
 
@@ -318,9 +394,13 @@ fun PenaltyShootoutScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         // Home Team
-                        Column(horizontalAlignment = Alignment.Start) {
-                            Text(text = homeTeam.shortName, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                            PenaltyPegsRow(penalties = homePenalties)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            DiskiClubBadge(team = homeTeam, size = 32.dp)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Column(horizontalAlignment = Alignment.Start) {
+                                Text(text = homeTeam.shortName, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                                PenaltyPegsRow(penalties = homePenalties)
+                            }
                         }
 
                         // Score
@@ -332,9 +412,13 @@ fun PenaltyShootoutScreen(
                         )
 
                         // Away Team
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text(text = awayTeam.shortName, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                            PenaltyPegsRow(penalties = awayPenalties)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text(text = awayTeam.shortName, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                                PenaltyPegsRow(penalties = awayPenalties)
+                            }
+                            Spacer(modifier = Modifier.width(6.dp))
+                            DiskiClubBadge(team = awayTeam, size = 32.dp)
                         }
                     }
                 }
@@ -426,8 +510,90 @@ fun PenaltyShootoutScreen(
             }
         }
 
-        // 4. User Controls for Goalkeeper Mode (Choose Dive Direction)
-        if (currentTurn == PenaltyTurnType.CPU_KICKING && !isBallInFlight && !isShootoutOver) {
+        // 4. User Controls for Away Turn:
+        // In 2-Player mode, Player 2 is Striker!
+        if (currentTurn == PenaltyTurnType.CPU_KICKING && isTwoPlayerMode && !isBallInFlight && !isShootoutOver) {
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color(0xCC000000),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFF9100)),
+                    modifier = Modifier.padding(bottom = 8.dp)
+                ) {
+                    Text(
+                        text = "📱 PASS DEVICE TO PLAYER 2 (${awayTeam.shortName})",
+                        color = Color(0xFFFFB74D),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Black,
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+                    )
+                }
+
+                if (isChargingPower) {
+                    Box(
+                        modifier = Modifier
+                            .width(180.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xDD000000))
+                            .border(1.dp, Color(0xFFFF9100), RoundedCornerShape(8.dp))
+                            .padding(8.dp)
+                    ) {
+                        Column {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(text = "P2 SHOT POWER", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                Text(text = "${(shotPower * 100).toInt()}%", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFF9100))
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            LinearProgressIndicator(
+                                progress = { shotPower },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(8.dp)
+                                    .clip(RoundedCornerShape(4.dp)),
+                                color = if (shotPower > 0.85f) Color(0xFFFF3D00) else Color(0xFFFF9100),
+                                trackColor = Color(0x44FFFFFF)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+
+                Button(
+                    onClick = {
+                        if (!isChargingPower) {
+                            isChargingPower = true
+                        } else {
+                            isChargingPower = false
+                            startPlayer2Shot()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9100)),
+                    shape = RoundedCornerShape(24.dp),
+                    modifier = Modifier
+                        .height(52.dp)
+                        .width(230.dp)
+                        .testTag("btn_take_p2_penalty")
+                ) {
+                    Text(
+                        text = if (!isChargingPower) "P2: AIM & CHARGE POWER" else "P2: UNLEASH PENALTY!",
+                        color = Color.White,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Black
+                    )
+                }
+            }
+        }
+
+        // In 1-Player mode, user controls Goalkeeper dive
+        if (currentTurn == PenaltyTurnType.CPU_KICKING && !isTwoPlayerMode && !isBallInFlight && !isShootoutOver) {
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -509,8 +675,15 @@ fun PenaltyShootoutScreen(
                         color = Color.White
                     )
                     Spacer(modifier = Modifier.height(8.dp))
+                    val winnerTitle = if (isTwoPlayerMode) {
+                        if (homeScore > awayScore) "🏆 PLAYER 1 WINS! (${homeTeam.name})"
+                        else if (awayScore > homeScore) "🏆 PLAYER 2 WINS! (${awayTeam.name})"
+                        else "HONOURS EVEN! (DRAW)"
+                    } else {
+                        "$winnerName WIN ON PENALTIES!"
+                    }
                     Text(
-                        text = "$winnerName WIN ON PENALTIES!",
+                        text = winnerTitle,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = AccentCyan,

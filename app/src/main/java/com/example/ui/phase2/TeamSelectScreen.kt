@@ -55,6 +55,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.TeamEntity
+import com.example.ui.components.DiskiClubBadge
 import com.example.ui.theme.DiskiGold
 import com.example.ui.theme.PitchGreen
 import com.example.ui.theme.RatingHigh
@@ -227,16 +228,7 @@ fun TeamSelectScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                            Box(
-                                modifier = Modifier
-                                    .size(38.dp)
-                                    .clip(CircleShape)
-                                    .background(pColor)
-                                    .border(1.dp, Color.White, CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(text = team.abbreviation.take(3), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 11.sp)
-                            }
+                            DiskiClubBadge(team = team, size = 42.dp)
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
                                 Text(text = team.name, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)

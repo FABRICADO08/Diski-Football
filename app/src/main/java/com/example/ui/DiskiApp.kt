@@ -1,5 +1,6 @@
 package com.example.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -14,6 +15,9 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.game.ui.MatchPitchScreen
 import com.example.game.ui.PenaltyShootoutScreen
+import androidx.compose.runtime.rememberCoroutineScope
+import com.example.ui.online.OnlineMultiplayerLobbyScreen
+import com.example.ui.online.OnlinePenaltyDuelScreen
 import com.example.ui.phase1.Phase1Screen
 import com.example.ui.phase1.Phase1ViewModel
 import com.example.ui.phase1.SquadDialog
@@ -24,6 +28,7 @@ import com.example.ui.phase2.StandingsScreen
 import com.example.ui.phase2.TeamSelectScreen
 import com.example.ui.phase2.TournamentBracketsScreen
 import com.example.ui.theme.SurfaceDark
+import kotlinx.coroutines.launch
 
 @Composable
 fun DiskiApp(
@@ -47,6 +52,7 @@ fun DiskiApp(
     val nedbankMatches by viewModel.nedbankMatches.collectAsStateWithLifecycle()
     val playoffMatches by viewModel.playoffMatches.collectAsStateWithLifecycle()
     val playoffStandings by viewModel.playoffStandings.collectAsStateWithLifecycle()
+    val cblMatches by viewModel.cblMatches.collectAsStateWithLifecycle()
     val marketPlayers by viewModel.transferMarketPlayers.collectAsStateWithLifecycle()
     val selectedTeamForModal by viewModel.selectedTeamForModal.collectAsStateWithLifecycle()
     val selectedTeamSquad by viewModel.selectedTeamSquad.collectAsStateWithLifecycle()
@@ -57,8 +63,17 @@ fun DiskiApp(
     val pitchHomeSquad by viewModel.pitchMatchHomeSquad.collectAsStateWithLifecycle()
     val pitchAwaySquad by viewModel.pitchMatchAwaySquad.collectAsStateWithLifecycle()
     val pitchTournamentName by viewModel.pitchMatchTournamentName.collectAsStateWithLifecycle()
+    val pitchMatchDurationSeconds by viewModel.pitchMatchDurationSeconds.collectAsStateWithLifecycle()
+    val pitchMatchDifficulty by viewModel.pitchMatchDifficulty.collectAsStateWithLifecycle()
     val penaltyHomeTeam by viewModel.penaltyHomeTeam.collectAsStateWithLifecycle()
     val penaltyAwayTeam by viewModel.penaltyAwayTeam.collectAsStateWithLifecycle()
+    val isTwoPlayerPenaltyMode by viewModel.isTwoPlayerPenaltyMode.collectAsStateWithLifecycle()
+    val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
+    val userProfile by viewModel.userProfile.collectAsStateWithLifecycle()
+    val currentOnlineRoom by viewModel.currentOnlineRoom.collectAsStateWithLifecycle()
+    val isOnlineLoading by viewModel.isOnlineLoading.collectAsStateWithLifecycle()
+    val onlineError by viewModel.onlineError.collectAsStateWithLifecycle()
+    val coroutineScope = rememberCoroutineScope()
 
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -66,6 +81,26 @@ fun DiskiApp(
         snackbarMessage?.let {
             snackbarHostState.showSnackbar(it)
             viewModel.dismissSnackbar()
+        }
+    }
+
+    if (selectedTeamForModal != null) {
+        BackHandler {
+            viewModel.dismissSquadModal()
+        }
+    } else if (currentScreen != ScreenRoute.MAIN_MENU) {
+        BackHandler {
+            when (currentScreen) {
+                ScreenRoute.PENALTY_SHOOTOUT -> {
+                    viewModel.navigateTo(if (activeCareer != null) ScreenRoute.CAREER_DASHBOARD else ScreenRoute.MAIN_MENU)
+                }
+                ScreenRoute.ONLINE_MULTIPLAYER_LOBBY, ScreenRoute.ONLINE_PENALTY_DUEL -> {
+                    viewModel.exitOnlineMatch()
+                }
+                else -> {
+                    viewModel.navigateTo(ScreenRoute.MAIN_MENU)
+                }
+            }
         }
     }
 
@@ -154,14 +189,20 @@ fun DiskiApp(
                         mtn8Matches = mtn8Matches,
                         carlingMatches = carlingMatches,
                         nedbankMatches = nedbankMatches,
+                        cblMatches = cblMatches,
                         playoffMatches = playoffMatches,
                         playoffStandings = playoffStandings,
                         allTeams = allTeams,
                         onBack = { viewModel.navigateTo(ScreenRoute.MAIN_MENU) },
                         onSimulateMatch = { viewModel.simulateSpecificMatch(it) },
+                        onPlayMatch = { home, away, stage, matchId ->
+                            viewModel.launchPitchMatch(home, away, stage, matchId)
+                        },
                         onTeamClick = { viewModel.showTeamSquadModal(it) },
                         onGenerateCarlingDraw = { viewModel.generateCarlingDraw() },
                         onGenerateNedbankDraw = { viewModel.generateNedbankDraw() },
+                        onGenerateCblDraw = { viewModel.generateCarlingBlackLabelDraw() },
+                        onVoteCbl = { team, vote -> viewModel.voteCarlingBlackLabel(team, vote) },
                         onStartPlayoffs = { viewModel.startPromotionPlayoffs() },
                         onFinalizeSeason = { viewModel.finalizeSeasonPromotionRelegation() }
                     )
@@ -174,18 +215,18 @@ fun DiskiApp(
                             viewModel.simulateNextMatch()
                             viewModel.navigateTo(ScreenRoute.MAIN_MENU)
                         },
-                        onPlayQuickMatch = { homeId, awayId ->
+                        onPlayQuickMatch = { homeId, awayId, durationSecs, difficulty ->
                             val home = allTeams.find { it.id == homeId } ?: allTeams.firstOrNull()
                             val away = allTeams.find { it.id == awayId } ?: allTeams.lastOrNull()
                             if (home != null && away != null) {
-                                viewModel.launchPitchMatch(home, away, "Exhibition Match", null)
+                                viewModel.launchPitchMatch(home, away, "Exhibition Match", null, durationSecs, difficulty)
                             }
                         },
-                        onPlayPenaltyShootout = { homeId, awayId ->
+                        onPlayPenaltyShootout = { homeId, awayId, is2P ->
                             val home = allTeams.find { it.id == homeId } ?: allTeams.firstOrNull()
                             val away = allTeams.find { it.id == awayId } ?: allTeams.lastOrNull()
                             if (home != null && away != null) {
-                                viewModel.launchPenaltyShootout(home, away)
+                                viewModel.launchPenaltyShootout(home, away, is2P)
                             }
                         }
                     )
@@ -200,6 +241,8 @@ fun DiskiApp(
                             homeSquad = pitchHomeSquad,
                             awaySquad = pitchAwaySquad,
                             tournamentName = pitchTournamentName,
+                            matchDurationSeconds = pitchMatchDurationSeconds,
+                            difficulty = pitchMatchDifficulty,
                             onMatchCompleted = { stats -> viewModel.completePitchMatch(stats) },
                             onExitToMenu = { viewModel.navigateTo(ScreenRoute.MAIN_MENU) },
                             onGoToPenalties = {
@@ -217,6 +260,7 @@ fun DiskiApp(
                         PenaltyShootoutScreen(
                             homeTeam = hTeam,
                             awayTeam = aTeam,
+                            isTwoPlayerMode = isTwoPlayerPenaltyMode,
                             onFinished = { homeScore, awayScore ->
                                 viewModel.completePenaltyShootout(homeScore, awayScore)
                             },
@@ -232,6 +276,50 @@ fun DiskiApp(
                     Phase1Screen(
                         viewModel = phase1ViewModel,
                         onBackToMenu = { viewModel.navigateTo(ScreenRoute.MAIN_MENU) }
+                    )
+                }
+                ScreenRoute.ONLINE_MULTIPLAYER_LOBBY -> {
+                    OnlineMultiplayerLobbyScreen(
+                        currentUser = currentUser,
+                        userProfile = userProfile,
+                        currentRoom = currentOnlineRoom,
+                        isLoading = isOnlineLoading,
+                        errorMessage = onlineError,
+                        allTeams = allTeams,
+                        onSignInWithGoogle = {
+                            coroutineScope.launch {
+                                viewModel.googleAuthManager.signInWithGoogle()
+                                viewModel.refreshAuthState()
+                            }
+                        },
+                        onCreateRoom = { hostTeam, gamerTag ->
+                            viewModel.createOnlineRoom(hostTeam, gamerTag)
+                        },
+                        onJoinRoom = { code, guestTeam, gamerTag ->
+                            viewModel.joinOnlineRoom(code, guestTeam, gamerTag)
+                        },
+                        onCancelRoom = {
+                            viewModel.exitOnlineMatch()
+                        },
+                        onBack = {
+                            viewModel.navigateTo(ScreenRoute.MAIN_MENU)
+                        },
+                        onDismissError = {
+                            viewModel.dismissOnlineError()
+                        }
+                    )
+                }
+                ScreenRoute.ONLINE_PENALTY_DUEL -> {
+                    OnlinePenaltyDuelScreen(
+                        room = currentOnlineRoom,
+                        currentUser = currentUser,
+                        allTeams = allTeams,
+                        onTakeShot = { scored, commentary ->
+                            viewModel.takeOnlinePenaltyShot(scored, commentary)
+                        },
+                        onExit = {
+                            viewModel.exitOnlineMatch()
+                        }
                     )
                 }
                 else -> {

@@ -148,8 +148,8 @@ fun Phase1Screen(
                     0 -> {
                         // PSL Teams
                         TeamsList(
-                            title = "Premier Soccer League (Betway Premiership)",
-                            subtitle = "16 Top-Flight South African Clubs • Auto-Relegation & Play-off spots",
+                            title = "Premier Soccer League (2026/2027 Betway Premiership)",
+                            subtitle = "16 Top-Flight Clubs • Official 2026/2027 Rosters & Badges",
                             searchQuery = uiState.searchQuery,
                             onSearchChanged = { viewModel.setSearchQuery(it) },
                             teams = pslTeams.filter {
@@ -163,8 +163,8 @@ fun Phase1Screen(
                     1 -> {
                         // NFD Teams
                         TeamsList(
-                            title = "Motsepe Foundation Championship (NFD)",
-                            subtitle = "16 Second-Tier Clubs • 1 Auto-Promotion, 2 Play-off berths",
+                            title = "Motsepe Foundation Championship (2026/2027 NFD)",
+                            subtitle = "16 Second-Tier Clubs • Official 2026/2027 Rosters & Badges",
                             searchQuery = uiState.searchQuery,
                             onSearchChanged = { viewModel.setSearchQuery(it) },
                             teams = nfdTeams.filter {
@@ -260,7 +260,7 @@ private fun Phase1Header(onBackToMenu: (() -> Unit)? = null) {
                     )
                 }
                 Text(
-                    text = "Phase 1: Architecture & Data Layer",
+                    text = "Official 2026/2027 Season Database",
                     style = MaterialTheme.typography.bodySmall,
                     color = DiskiGold,
                     fontSize = 11.sp,

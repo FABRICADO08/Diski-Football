@@ -35,15 +35,16 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -59,6 +60,7 @@ import com.example.data.model.MatchEntity
 import com.example.data.model.MatchStatus
 import com.example.data.model.StandingEntity
 import com.example.data.model.TeamEntity
+import com.example.ui.components.DiskiClubBadge
 import com.example.ui.theme.AccentOrange
 import com.example.ui.theme.AccentRed
 import com.example.ui.theme.DiskiGold
@@ -77,14 +79,18 @@ fun TournamentBracketsScreen(
     mtn8Matches: List<MatchEntity>,
     carlingMatches: List<MatchEntity>,
     nedbankMatches: List<MatchEntity>,
+    cblMatches: List<MatchEntity> = emptyList(),
     playoffMatches: List<MatchEntity>,
     playoffStandings: List<StandingEntity>,
     allTeams: List<TeamEntity>,
     onBack: () -> Unit,
     onSimulateMatch: (String) -> Unit,
+    onPlayMatch: ((home: TeamEntity, away: TeamEntity, stage: String, matchId: String) -> Unit)? = null,
     onTeamClick: (TeamEntity) -> Unit,
     onGenerateCarlingDraw: () -> Unit,
     onGenerateNedbankDraw: () -> Unit,
+    onGenerateCblDraw: () -> Unit = {},
+    onVoteCbl: (teamName: String, playerVote: String) -> Unit = { _, _ -> },
     onStartPlayoffs: () -> Unit,
     onFinalizeSeason: () -> Unit,
     modifier: Modifier = Modifier
@@ -137,8 +143,9 @@ fun TournamentBracketsScreen(
             }
 
             // Cup Tabs
-            TabRow(
+            ScrollableTabRow(
                 selectedTabIndex = selectedTabIndex,
+                edgePadding = 12.dp,
                 containerColor = SurfaceDark,
                 contentColor = DiskiGold,
                 indicator = { tabPositions ->
@@ -174,6 +181,12 @@ fun TournamentBracketsScreen(
                     text = { Text("Play-offs", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = if (selectedTabIndex == 3) DiskiGold else TextSecondary) },
                     modifier = Modifier.testTag("tab_playoff")
                 )
+                Tab(
+                    selected = selectedTabIndex == 4,
+                    onClick = { selectedTabIndex = 4 },
+                    text = { Text("Black Label", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = if (selectedTabIndex == 4) DiskiGold else TextSecondary) },
+                    modifier = Modifier.testTag("tab_black_label")
+                )
             }
 
             LazyColumn(
@@ -203,11 +216,14 @@ fun TournamentBracketsScreen(
                         }
 
                         items(mtn8Matches) { match ->
+                            val home = teamsMap[match.homeTeamId]
+                            val away = teamsMap[match.awayTeamId]
                             BracketMatchCard(
                                 match = match,
-                                home = teamsMap[match.homeTeamId],
-                                away = teamsMap[match.awayTeamId],
+                                home = home,
+                                away = away,
                                 onSimulate = { onSimulateMatch(match.id) },
+                                onPlay = if (home != null && away != null && onPlayMatch != null) { { onPlayMatch(home, away, match.stage, match.id) } } else null,
                                 onTeamClick = onTeamClick
                             )
                         }
@@ -283,11 +299,14 @@ fun TournamentBracketsScreen(
                             }
 
                             items(carlingMatches) { match ->
+                                val home = teamsMap[match.homeTeamId]
+                                val away = teamsMap[match.awayTeamId]
                                 BracketMatchCard(
                                     match = match,
-                                    home = teamsMap[match.homeTeamId],
-                                    away = teamsMap[match.awayTeamId],
+                                    home = home,
+                                    away = away,
                                     onSimulate = { onSimulateMatch(match.id) },
+                                    onPlay = if (home != null && away != null && onPlayMatch != null) { { onPlayMatch(home, away, match.stage, match.id) } } else null,
                                     onTeamClick = onTeamClick
                                 )
                             }
@@ -352,11 +371,14 @@ fun TournamentBracketsScreen(
                             }
 
                             items(nedbankMatches) { match ->
+                                val home = teamsMap[match.homeTeamId]
+                                val away = teamsMap[match.awayTeamId]
                                 BracketMatchCard(
                                     match = match,
-                                    home = teamsMap[match.homeTeamId],
-                                    away = teamsMap[match.awayTeamId],
+                                    home = home,
+                                    away = away,
                                     onSimulate = { onSimulateMatch(match.id) },
+                                    onPlay = if (home != null && away != null && onPlayMatch != null) { { onPlayMatch(home, away, match.stage, match.id) } } else null,
                                     onTeamClick = onTeamClick
                                 )
                             }
@@ -457,11 +479,14 @@ fun TournamentBracketsScreen(
                             }
 
                             items(playoffMatches) { match ->
+                                val home = teamsMap[match.homeTeamId]
+                                val away = teamsMap[match.awayTeamId]
                                 BracketMatchCard(
                                     match = match,
-                                    home = teamsMap[match.homeTeamId],
-                                    away = teamsMap[match.awayTeamId],
+                                    home = home,
+                                    away = away,
                                     onSimulate = { onSimulateMatch(match.id) },
+                                    onPlay = if (home != null && away != null && onPlayMatch != null) { { onPlayMatch(home, away, match.stage, match.id) } } else null,
                                     onTeamClick = onTeamClick
                                 )
                             }
@@ -492,6 +517,160 @@ fun TournamentBracketsScreen(
                                         }
                                     }
                                 }
+                            }
+                        }
+                    }
+                    4 -> {
+                        // Carling Black Label Cup (Pre-season Fan-Voted Tournament)
+                        item {
+                            CupHeaderCard(
+                                title = "Carling Black Label Cup",
+                                subtitle = "Pre-season Fan-Voted Showdown • Soweto Derby & Mzansi Giants",
+                                accentColor = AccentOrange
+                            )
+                        }
+
+                        // Fan Voting Card
+                        item {
+                            Card(
+                                modifier = Modifier.fillMaxWidth().testTag("card_cbl_fan_vote"),
+                                colors = CardDefaults.cardColors(containerColor = SurfaceCard),
+                                shape = RoundedCornerShape(16.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, DiskiGold)
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Box(
+                                            modifier = Modifier.size(32.dp).clip(CircleShape).background(DiskiGold),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(imageVector = Icons.Default.Star, contentDescription = null, tint = SurfaceDark, modifier = Modifier.size(18.dp))
+                                        }
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Column {
+                                            Text("BE THE CHAMPION COACH", fontWeight = FontWeight.Black, fontSize = 13.sp, color = DiskiGold)
+                                            Text("Cast your fan vote to influence starting line-ups & tactics!", fontSize = 11.sp, color = TextSecondary)
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(12.dp))
+
+                                    var selectedClubForVote by remember { mutableStateOf("Kaizer Chiefs") }
+                                    var selectedVoteOption by remember { mutableStateOf("Start Ashley Du Preez (Pacey Counter)") }
+
+                                    Text("Select Your Club:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        listOf("Kaizer Chiefs", "Orlando Pirates", "Sundowns").forEach { club ->
+                                            Surface(
+                                                shape = RoundedCornerShape(8.dp),
+                                                color = if (selectedClubForVote == club) DiskiGold else SurfaceCardHighlight,
+                                                modifier = Modifier.clickable {
+                                                    selectedClubForVote = club
+                                                    selectedVoteOption = when (club) {
+                                                        "Kaizer Chiefs" -> "Start Ashley Du Preez (Pacey Counter)"
+                                                        "Orlando Pirates" -> "Start Patrick Maswanganyi as Playmaker"
+                                                        else -> "Start Lucas Ribeiro Costa (Flair Attack)"
+                                                    }
+                                                }
+                                            ) {
+                                                Text(
+                                                    text = club,
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = if (selectedClubForVote == club) SurfaceDark else TextSecondary,
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(10.dp))
+
+                                    Text("Tactical Fan Choice:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = PitchGreenDark,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text(
+                                            text = "🗳️ $selectedVoteOption",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = DiskiGold,
+                                            modifier = Modifier.padding(10.dp)
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.height(12.dp))
+
+                                    Button(
+                                        onClick = { onVoteCbl(selectedClubForVote, selectedVoteOption) },
+                                        modifier = Modifier.fillMaxWidth().testTag("btn_submit_fan_vote"),
+                                        colors = ButtonDefaults.buttonColors(containerColor = DiskiGold),
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Text("Submit Fan Vote & Boost Morale (+5)", color = SurfaceDark, fontWeight = FontWeight.Black, fontSize = 12.sp)
+                                    }
+                                }
+                            }
+                        }
+
+                        if (cblMatches.isEmpty()) {
+                            item {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = CardDefaults.cardColors(containerColor = SurfaceCard),
+                                    shape = RoundedCornerShape(14.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(16.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text(text = "Carling Black Label Cup Pending", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = "Generate the pre-season showpiece tournament featuring the Soweto Derby (Chiefs vs Pirates) and Tshwane clash (Sundowns vs AmaZulu).",
+                                            fontSize = 11.sp,
+                                            color = TextSecondary,
+                                            textAlign = TextAlign.Center
+                                        )
+                                        Spacer(modifier = Modifier.height(14.dp))
+                                        Button(
+                                            onClick = onGenerateCblDraw,
+                                            colors = ButtonDefaults.buttonColors(containerColor = AccentOrange),
+                                            shape = RoundedCornerShape(10.dp),
+                                            modifier = Modifier.testTag("btn_draw_cbl")
+                                        ) {
+                                            Icon(imageVector = Icons.Default.Casino, contentDescription = null, tint = SurfaceDark)
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text("Seed Black Label Cup Bracket", fontWeight = FontWeight.Bold, color = SurfaceDark)
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            item {
+                                Text(
+                                    text = "PRE-SEASON FIXTURES & SOWETO DERBY",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = DiskiGold
+                                )
+                            }
+
+                            items(cblMatches) { match ->
+                                val home = teamsMap[match.homeTeamId]
+                                val away = teamsMap[match.awayTeamId]
+                                BracketMatchCard(
+                                    match = match,
+                                    home = home,
+                                    away = away,
+                                    onSimulate = { onSimulateMatch(match.id) },
+                                    onPlay = if (home != null && away != null && onPlayMatch != null) { { onPlayMatch(home, away, match.stage, match.id) } } else null,
+                                    onTeamClick = onTeamClick
+                                )
                             }
                         }
                     }
@@ -540,6 +719,7 @@ private fun BracketMatchCard(
     home: TeamEntity?,
     away: TeamEntity?,
     onSimulate: () -> Unit,
+    onPlay: (() -> Unit)? = null,
     onTeamClick: (TeamEntity) -> Unit
 ) {
     Card(
@@ -592,15 +772,30 @@ private fun BracketMatchCard(
 
             if (match.status != MatchStatus.FINISHED) {
                 Spacer(modifier = Modifier.height(10.dp))
-                Button(
-                    onClick = onSimulate,
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = PitchGreen),
-                    shape = RoundedCornerShape(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, tint = DiskiGold, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Simulate Knockout Match", color = DiskiGold, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    if (onPlay != null) {
+                        Button(
+                            onClick = onPlay,
+                            modifier = Modifier.weight(1.1f).testTag("btn_play_bracket_${match.id}"),
+                            colors = ButtonDefaults.buttonColors(containerColor = DiskiGold),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, tint = SurfaceDark, modifier = Modifier.size(15.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Play Pitch", color = SurfaceDark, fontWeight = FontWeight.Black, fontSize = 11.sp)
+                        }
+                    }
+                    Button(
+                        onClick = onSimulate,
+                        modifier = Modifier.weight(0.9f).testTag("btn_simulate_bracket_${match.id}"),
+                        colors = ButtonDefaults.buttonColors(containerColor = PitchGreen),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("Simulate", color = DiskiGold, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                    }
                 }
             }
         }
@@ -625,8 +820,7 @@ private fun TeamMatchupRow(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             team?.let {
-                val color = try { Color(android.graphics.Color.parseColor(it.primaryColorHex)) } catch (e: Exception) { DiskiGold }
-                Box(modifier = Modifier.size(20.dp).clip(CircleShape).background(color))
+                DiskiClubBadge(team = it, size = 24.dp)
                 Spacer(modifier = Modifier.width(8.dp))
             }
             Text(

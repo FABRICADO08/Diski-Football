@@ -45,10 +45,11 @@ class MatchEngine(
     val homeSquad: List<PlayerEntity> = emptyList(),
     val awaySquad: List<PlayerEntity> = emptyList(),
     val tournamentName: String = "Betway Premiership",
-    val matchDurationSeconds: Float = 180f // 3 minutes total real-time duration (90 sec per half)
+    val matchDurationSeconds: Float = 180f, // 3 minutes total real-time duration (90 sec per half)
+    val difficulty: String = "Medium"
 ) {
     val physicsEngine = GamePhysicsEngine()
-    val aiController = GameAiController()
+    val aiController = GameAiController(difficulty = difficulty)
 
     val ball = GameBall()
     val gameState = MatchGameState()

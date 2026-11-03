@@ -36,6 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.TeamEntity
+import com.example.ui.components.DiskiClubBadge
 import com.example.ui.theme.DiskiGold
 import com.example.ui.theme.RatingHigh
 import com.example.ui.theme.RatingMed
@@ -83,22 +84,8 @@ fun TeamCard(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.weight(1f)
                 ) {
-                    // Custom Club Crest Circle with Team Primary/Secondary Colors
-                    Box(
-                        modifier = Modifier
-                            .size(46.dp)
-                            .clip(CircleShape)
-                            .background(primaryColor)
-                            .border(2.dp, secondaryColor, CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = team.abbreviation.take(3),
-                            color = secondaryColor,
-                            fontWeight = FontWeight.Black,
-                            fontSize = 13.sp
-                        )
-                    }
+                    // Official Authentic Club Crest
+                    DiskiClubBadge(team = team, size = 48.dp)
 
                     Spacer(modifier = Modifier.width(12.dp))
 

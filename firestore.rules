@@ -1,0 +1,93 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.matches('^[a-zA-Z0-9_\\-]+$') && id.size() <= 64;
+    }
+
+    function isValidUserProfile(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 40 &&
+             (!('email' in data) || (data.email is string && data.email.size() <= 100)) &&
+             data.favoriteTeamId is string && data.favoriteTeamId.size() <= 50 &&
+             data.wins is int && data.wins >= 0 &&
+             data.losses is int && data.losses >= 0 &&
+             (!('createdAt' in data) || data.createdAt is timestamp) &&
+             (!('updatedAt' in data) || data.updatedAt is timestamp);
+    }
+
+    function isValidMatchRoom(data) {
+      return data.roomId is string && data.roomId.size() <= 64 &&
+             data.roomCode is string && data.roomCode.size() >= 3 && data.roomCode.size() <= 12 &&
+             data.hostUserId is string && data.hostUserId.size() <= 64 &&
+             data.hostDisplayName is string && data.hostDisplayName.size() <= 40 &&
+             data.hostTeamId is string && data.hostTeamId.size() <= 50 &&
+             (!('guestUserId' in data) || (data.guestUserId is string && data.guestUserId.size() <= 64)) &&
+             (!('guestDisplayName' in data) || (data.guestDisplayName is string && data.guestDisplayName.size() <= 40)) &&
+             (!('guestTeamId' in data) || (data.guestTeamId is string && data.guestTeamId.size() <= 50)) &&
+             data.status in ['WAITING_FOR_PLAYER', 'IN_PROGRESS', 'COMPLETED'] &&
+             data.currentTurn in ['HOST_KICKING', 'GUEST_KICKING'] &&
+             data.hostScore is int && data.hostScore >= 0 &&
+             data.guestScore is int && data.guestScore >= 0 &&
+             data.round is int && data.round >= 1 &&
+             data.hostKicks is list && data.hostKicks.size() <= 20 &&
+             data.guestKicks is list && data.guestKicks.size() <= 20 &&
+             (!('lastAction' in data) || (data.lastAction is string && data.lastAction.size() <= 300)) &&
+             (!('winnerUserId' in data) || (data.winnerUserId is string && data.winnerUserId.size() <= 64)) &&
+             (!('createdAt' in data) || data.createdAt is timestamp) &&
+             (!('updatedAt' in data) || data.updatedAt is timestamp);
+    }
+
+    // User Profile collection
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isOwner(userId) && isValidId(userId) &&
+                       isValidUserProfile(incoming()) &&
+                       incoming().userId == request.auth.uid;
+      allow update: if isOwner(userId) && isValidId(userId) &&
+                       resource != null &&
+                       isValidUserProfile(incoming()) &&
+                       incoming().userId == existing().userId;
+      allow delete: if isOwner(userId) && isValidId(userId);
+    }
+
+    // Match Rooms for 1v1 Online Multiplayer
+    match /match_rooms/{roomId} {
+      allow get: if isSignedIn() && isValidId(roomId);
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(roomId) &&
+                       incoming().hostUserId == request.auth.uid &&
+                       isValidMatchRoom(incoming());
+      allow update: if isSignedIn() && isValidId(roomId) &&
+                       resource != null &&
+                       isValidMatchRoom(incoming()) &&
+                       incoming().hostUserId == existing().hostUserId &&
+                       (
+                         request.auth.uid == existing().hostUserId ||
+                         (!('guestUserId' in existing()) && ('guestUserId' in incoming()) && incoming().guestUserId == request.auth.uid) ||
+                         (('guestUserId' in existing()) && existing().guestUserId == request.auth.uid)
+                       );
+      allow delete: if isSignedIn() && isValidId(roomId) &&
+                       resource != null &&
+                       request.auth.uid == existing().hostUserId;
+    }
+  }
+}

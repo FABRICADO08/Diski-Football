@@ -1,0 +1,148 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Represents an authenticated player's profile and stats.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The unique Firebase Auth UID."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Display name or gamertag."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the authenticated user."
+        },
+        "favoriteTeamId": {
+          "type": "string",
+          "description": "Selected favorite South African club ID."
+        },
+        "wins": {
+          "type": "integer",
+          "description": "Number of multiplayer matches won."
+        },
+        "losses": {
+          "type": "integer",
+          "description": "Number of multiplayer matches lost."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Account profile creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last profile update timestamp."
+        }
+      },
+      "required": ["userId", "displayName", "favoriteTeamId", "wins", "losses", "createdAt", "updatedAt"]
+    },
+    "MatchRoom": {
+      "title": "MatchRoom",
+      "description": "Represents an online 1v1 multiplayer match room.",
+      "type": "object",
+      "properties": {
+        "roomId": {
+          "type": "string",
+          "description": "Unique match room document identifier."
+        },
+        "roomCode": {
+          "type": "string",
+          "description": "Human-friendly code used by player 2 to join."
+        },
+        "hostUserId": {
+          "type": "string",
+          "description": "UID of the player hosting the room."
+        },
+        "hostDisplayName": {
+          "type": "string",
+          "description": "Display name of host player."
+        },
+        "hostTeamId": {
+          "type": "string",
+          "description": "Team ID selected by host."
+        },
+        "guestUserId": {
+          "type": "string",
+          "description": "UID of guest player."
+        },
+        "guestDisplayName": {
+          "type": "string",
+          "description": "Display name of guest player."
+        },
+        "guestTeamId": {
+          "type": "string",
+          "description": "Team ID selected by guest."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["WAITING_FOR_PLAYER", "IN_PROGRESS", "COMPLETED"],
+          "description": "Current lifecycle state of the room."
+        },
+        "currentTurn": {
+          "type": "string",
+          "enum": ["HOST_KICKING", "GUEST_KICKING"],
+          "description": "Which player is currently striking."
+        },
+        "hostScore": {
+          "type": "integer",
+          "description": "Score of host player."
+        },
+        "guestScore": {
+          "type": "integer",
+          "description": "Score of guest player."
+        },
+        "round": {
+          "type": "integer",
+          "description": "Current penalty shootout round."
+        },
+        "hostKicks": {
+          "type": "array",
+          "description": "List of host kicks result (true=scored, false=missed)."
+        },
+        "guestKicks": {
+          "type": "array",
+          "description": "List of guest kicks result (true=scored, false=missed)."
+        },
+        "lastAction": {
+          "type": "string",
+          "description": "Commentary description of the last event."
+        },
+        "winnerUserId": {
+          "type": "string",
+          "description": "UID of the winner when match completes."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Room creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Room last updated timestamp."
+        }
+      },
+      "required": ["roomId", "roomCode", "hostUserId", "hostDisplayName", "hostTeamId", "status", "currentTurn", "hostScore", "guestScore", "round", "hostKicks", "guestKicks", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/UserProfile"
+      },
+      "description": "Stores user profile and multiplayer statistics."
+    },
+    "/match_rooms/{roomId}": {
+      "schema": {
+        "$ref": "#/entities/MatchRoom"
+      },
+      "description": "Stores real-time 1v1 online multiplayer penalty duel matches."
+    }
+  }
+}

@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SportsSoccer
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -218,7 +219,7 @@ fun MainMenuScreen(
                             color = Color.White
                         )
                         Text(
-                            text = "32 Clubs • MTN8 • Carling Knockout • Nedbank Cup",
+                            text = "32 Clubs • MTN8 • Carling Knockout • Nedbank Cup • Black Label Cup",
                             fontSize = 12.sp,
                             color = TextSecondary
                         )
@@ -344,6 +345,20 @@ fun MainMenuScreen(
             )
         }
 
+        // Online 1v1 Multiplayer (Two Phones)
+        item {
+            MenuModeCard(
+                title = "Online 1v1 Multiplayer",
+                subtitle = "Challenge a friend on another Android phone! Create or join match rooms with a 4-digit code for live cloud penalty duels.",
+                badge = "2 Phones (Live)",
+                badgeColor = Color(0xFF00B0FF),
+                icon = Icons.Default.Wifi,
+                iconTint = Color(0xFF00B0FF),
+                testTag = "btn_online_multiplayer",
+                onClick = { onNavigate(ScreenRoute.ONLINE_MULTIPLAYER_LOBBY) }
+            )
+        }
+
         // League Standings & Tables Hub
         item {
             MenuModeCard(
@@ -362,7 +377,7 @@ fun MainMenuScreen(
         item {
             MenuModeCard(
                 title = "South African Cup Brackets",
-                subtitle = "MTN8 (Wafa Wafa), Carling Knockout Cup, and Nedbank Cup knockout trees with round fixtures and progress.",
+                subtitle = "MTN8 (Wafa Wafa), Carling Knockout, Nedbank Cup, Black Label Cup & Play-offs trees with live pitch play & simulation.",
                 badge = "Cup Brackets",
                 badgeColor = AccentRed,
                 icon = Icons.Default.EmojiEvents,

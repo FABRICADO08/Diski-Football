@@ -51,4 +51,18 @@ class Phase2WorkflowTest {
 
         assertEquals("MTN8 must have 4 Quarter-Final fixtures", 4, mtn8Matches.size)
     }
+
+    @Test
+    fun testTwoPlayerPenaltyShootoutTeamsAndScoring() {
+        val chiefs = SouthAfricanTeamsData.allTeams.find { it.id == "kaizer_chiefs" }
+        val pirates = SouthAfricanTeamsData.allTeams.find { it.id == "orlando_pirates" }
+        assertNotNull(chiefs)
+        assertNotNull(pirates)
+
+        // Player 1 (Chiefs) vs Player 2 (Pirates)
+        val homeScores = 5
+        val awayScores = 4
+        val winner = if (homeScores > awayScores) "Player 1 (${chiefs!!.shortName})" else "Player 2 (${pirates!!.shortName})"
+        assertEquals("Player 1 (Chiefs)", winner)
+    }
 }

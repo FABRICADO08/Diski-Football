@@ -111,4 +111,24 @@ class Phase3TournamentEngineTest {
         )
         assertEquals("teamA", TournamentEngine.resolveMatchWinner(drawPens))
     }
+
+    @Test
+    fun testCarlingBlackLabelCupFixtures() {
+        val fixtures = TournamentEngine.generateCarlingBlackLabelCup(season = 2026)
+        assertEquals(3, fixtures.size) // 2 Semi-Finals + 1 Grand Final
+
+        val sf1 = fixtures[0]
+        assertEquals("kaizer_chiefs", sf1.homeTeamId)
+        assertEquals("orlando_pirates", sf1.awayTeamId)
+        assertEquals(TournamentType.CARLING_BLACK_LABEL, sf1.tournamentType)
+        assertTrue(sf1.stage.contains("Soweto Derby"))
+
+        val sf2 = fixtures[1]
+        assertEquals("mamelodi_sundowns", sf2.homeTeamId)
+        assertEquals("amazulu_fc", sf2.awayTeamId)
+        assertEquals(TournamentType.CARLING_BLACK_LABEL, sf2.tournamentType)
+
+        val finalMatch = fixtures[2]
+        assertEquals("Grand Final (Champion of Champions)", finalMatch.stage)
+    }
 }

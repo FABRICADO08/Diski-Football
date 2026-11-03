@@ -260,6 +260,53 @@ object TournamentEngine {
     }
 
     /**
+     * Generates Carling Black Label Cup pre-season tournament fixtures:
+     * Semi-Final 1: Soweto Derby (Kaizer Chiefs vs Orlando Pirates at FNB Stadium)
+     * Semi-Final 2: Tshwane / Coastal Derby (Mamelodi Sundowns vs AmaZulu FC)
+     * Grand Final: Winners clash for the Champion of Champions crown
+     */
+    fun generateCarlingBlackLabelCup(
+        team1Id: String = "kaizer_chiefs",
+        team2Id: String = "orlando_pirates",
+        team3Id: String = "mamelodi_sundowns",
+        team4Id: String = "amazulu_fc",
+        season: Int = 2026
+    ): List<MatchEntity> {
+        return listOf(
+            MatchEntity(
+                id = "cbl_${season}_sf1",
+                homeTeamId = team1Id,
+                awayTeamId = team2Id,
+                tournamentType = TournamentType.CARLING_BLACK_LABEL,
+                gameWeek = 1,
+                stage = "Semi-Final 1 (Soweto Derby • FNB Stadium)",
+                seasonYear = season,
+                status = MatchStatus.SCHEDULED
+            ),
+            MatchEntity(
+                id = "cbl_${season}_sf2",
+                homeTeamId = team3Id,
+                awayTeamId = team4Id,
+                tournamentType = TournamentType.CARLING_BLACK_LABEL,
+                gameWeek = 1,
+                stage = "Semi-Final 2 (Mzansi Clash • FNB Stadium)",
+                seasonYear = season,
+                status = MatchStatus.SCHEDULED
+            ),
+            MatchEntity(
+                id = "cbl_${season}_final",
+                homeTeamId = team1Id,
+                awayTeamId = team3Id,
+                tournamentType = TournamentType.CARLING_BLACK_LABEL,
+                gameWeek = 2,
+                stage = "Grand Final (Champion of Champions)",
+                seasonYear = season,
+                status = MatchStatus.SCHEDULED
+            )
+        )
+    }
+
+    /**
      * Determines match winner, resolving ties with extra time / penalties
      */
     fun resolveMatchWinner(match: MatchEntity): String {

@@ -29,6 +29,8 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -51,6 +53,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.data.model.PlayerEntity
 import com.example.data.model.TeamEntity
+import com.example.ui.components.DiskiClubBadge
 import com.example.game.engine.MatchAudioHapticEvent
 import com.example.game.engine.MatchEngine
 import com.example.game.engine.MatchStats
@@ -73,18 +76,22 @@ fun MatchPitchScreen(
     homeSquad: List<PlayerEntity> = emptyList(),
     awaySquad: List<PlayerEntity> = emptyList(),
     tournamentName: String = "Betway Premiership",
+    matchDurationSeconds: Float = 180f,
+    difficulty: String = "Medium",
     onMatchCompleted: (MatchStats) -> Unit,
     onExitToMenu: () -> Unit,
     onGoToPenalties: ((MatchStats) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    val matchEngine = remember(homeTeam.id, awayTeam.id) {
+    val matchEngine = remember(homeTeam.id, awayTeam.id, matchDurationSeconds, difficulty) {
         MatchEngine(
             homeTeam = homeTeam,
             awayTeam = awayTeam,
             homeSquad = homeSquad,
             awaySquad = awaySquad,
-            tournamentName = tournamentName
+            tournamentName = tournamentName,
+            matchDurationSeconds = matchDurationSeconds,
+            difficulty = difficulty
         )
     }
 
@@ -133,6 +140,8 @@ fun MatchPitchScreen(
     var showHalfTimeDialog by remember { mutableStateOf(false) }
     var showFullTimeDialog by remember { mutableStateOf(false) }
     var completedStats by remember { mutableStateOf<MatchStats?>(null) }
+    var audioEnabled by remember { mutableStateOf(audioHaptics.isAudioEnabled) }
+    var hapticsEnabled by remember { mutableStateOf(audioHaptics.isHapticsEnabled) }
 
     // Re-render trigger tick
     var frameTick by remember { mutableFloatStateOf(0f) }
@@ -207,21 +216,7 @@ fun MatchPitchScreen(
                 ) {
                     // Home Team Info
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(28.dp)
-                                .clip(CircleShape)
-                                .background(matchEngine.homeKitPrimary)
-                                .border(1.dp, matchEngine.homeKitSecondary, CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = homeTeam.abbreviation.take(3),
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = matchEngine.homeKitSecondary
-                            )
-                        }
+                        DiskiClubBadge(team = homeTeam, size = 28.dp)
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = homeTeam.shortName,
@@ -262,21 +257,7 @@ fun MatchPitchScreen(
                             color = TextPrimary
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Box(
-                            modifier = Modifier
-                                .size(28.dp)
-                                .clip(CircleShape)
-                                .background(matchEngine.awayKitPrimary)
-                                .border(1.dp, matchEngine.awayKitSecondary, CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = awayTeam.abbreviation.take(3),
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = matchEngine.awayKitSecondary
-                            )
-                        }
+                        DiskiClubBadge(team = awayTeam, size = 28.dp)
                     }
 
                     // Clock & Pause
@@ -560,6 +541,64 @@ fun MatchPitchScreen(
                     ) {
                         Text(text = "MATCH PAUSED", fontSize = 18.sp, fontWeight = FontWeight.Black, color = DiskiGold)
                         Spacer(modifier = Modifier.height(4.dp))
+
+                        // Audio & Haptics Quick Toggles
+                        Card(
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFF142416)),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x44FFD200)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column {
+                                        Text(text = "Sound FX & Vuvuzela", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                                        Text(text = "Whistles, kicks, post ping & goal roar", fontSize = 9.sp, color = TextSecondary)
+                                    }
+                                    Switch(
+                                        checked = audioEnabled,
+                                        onCheckedChange = {
+                                            audioEnabled = it
+                                            audioHaptics.isAudioEnabled = it
+                                        },
+                                        colors = SwitchDefaults.colors(
+                                            checkedThumbColor = DiskiGold,
+                                            checkedTrackColor = PitchGreenDark
+                                        ),
+                                        modifier = Modifier.testTag("switch_sound_fx")
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(6.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column {
+                                        Text(text = "Haptic Vibrations", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                                        Text(text = "Tackles, skill moves & celebrations", fontSize = 9.sp, color = TextSecondary)
+                                    }
+                                    Switch(
+                                        checked = hapticsEnabled,
+                                        onCheckedChange = {
+                                            hapticsEnabled = it
+                                            audioHaptics.isHapticsEnabled = it
+                                        },
+                                        colors = SwitchDefaults.colors(
+                                            checkedThumbColor = DiskiGold,
+                                            checkedTrackColor = PitchGreenDark
+                                        ),
+                                        modifier = Modifier.testTag("switch_haptics")
+                                    )
+                                }
+                            }
+                        }
 
                         Button(
                             onClick = { isPaused = false },

@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.sp
 import com.example.data.model.MatchEntity
 import com.example.data.model.StandingEntity
 import com.example.data.model.TeamEntity
+import com.example.ui.components.DiskiClubBadge
 import com.example.ui.theme.AccentOrange
 import com.example.ui.theme.AccentRed
 import com.example.ui.theme.DiskiGold
@@ -328,14 +329,8 @@ private fun TableRow(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 team?.let {
-                    val pColor = try { Color(android.graphics.Color.parseColor(it.primaryColorHex)) } catch (e: Exception) { DiskiGold }
-                    Box(
-                        modifier = Modifier
-                            .size(18.dp)
-                            .clip(CircleShape)
-                            .background(pColor)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
+                    DiskiClubBadge(team = it, size = 22.dp)
+                    Spacer(modifier = Modifier.width(8.dp))
                 }
                 Text(
                     text = team?.shortName ?: standing.teamId,

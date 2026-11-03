@@ -291,6 +291,15 @@ class DiskiRepository(private val database: DiskiDatabase) {
         }
     }
 
+    suspend fun generateCarlingBlackLabelTournament(season: Int = 2026) = withContext(Dispatchers.IO) {
+        val fixtures = com.example.domain.tournament.TournamentEngine.generateCarlingBlackLabelCup(season = season)
+        database.matchDao().insertAll(fixtures)
+        val tournament = database.tournamentDao().getTournament(TournamentType.CARLING_BLACK_LABEL, season)
+        if (tournament != null) {
+            database.tournamentDao().update(tournament.copy(currentRound = "Semi-Finals (Soweto & Mzansi Derbies)"))
+        }
+    }
+
     suspend fun startPromotionPlayoffTournament(season: Int = 2026) = withContext(Dispatchers.IO) {
         val pslStandings = database.standingDao().getStandings(TournamentType.PSL, season)
         val nfdStandings = database.standingDao().getStandings(TournamentType.NFD, season)

@@ -13,6 +13,7 @@ enum class TournamentType(val displayName: String, val description: String) {
     CARLING_CKO("Carling Knockout Cup", "All 16 PSL teams in high-stakes knockout + All-Star clash"),
     NEDBANK_CUP("Nedbank Cup", "The premier national cup: 32 teams from PSL, NFD & Amateurs"),
     PLAYOFF("PSL/NFD Promotion Play-offs", "3-team round robin: 15th PSL vs 2nd & 3rd NFD"),
+    CARLING_BLACK_LABEL("Carling Black Label Cup", "Pre-season fan-voted spectacle (Soweto Derby & Mzansi giants)"),
     FRIENDLY("Exhibition Match", "Quick match against local rivals")
 }
 

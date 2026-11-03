@@ -67,6 +67,7 @@ import com.example.data.model.MatchEntity
 import com.example.data.model.MatchStatus
 import com.example.data.model.PlayerEntity
 import com.example.data.model.TeamEntity
+import com.example.ui.components.DiskiClubBadge
 import com.example.ui.theme.AccentOrange
 import com.example.ui.theme.AccentRed
 import com.example.ui.theme.DiskiGold
@@ -138,16 +139,7 @@ fun ManagerDashboardScreen(
                     IconButton(onClick = onBack, modifier = Modifier.testTag("btn_back_manager")) {
                         Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = TextPrimary)
                     }
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(primaryColor)
-                            .border(1.dp, secondaryColor, CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(text = team.abbreviation.take(3), color = secondaryColor, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    }
+                    DiskiClubBadge(team = team, size = 36.dp)
                     Spacer(modifier = Modifier.width(8.dp))
                     Column {
                         Text(text = team.name, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)

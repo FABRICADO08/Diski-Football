@@ -8,7 +8,9 @@ import com.example.game.model.PlayerTeamSide
 import com.example.game.model.Vector2D
 import kotlin.random.Random
 
-class GameAiController {
+class GameAiController(
+    var difficulty: String = "Medium"
+) {
 
     fun updateAi(
         dt: Float,
@@ -19,6 +21,13 @@ class GameAiController {
     ) {
         val homeGoalTarget = Vector2D(985f, 325f)
         val awayGoalTarget = Vector2D(15f, 325f)
+
+        val speedMultiplier = when (difficulty.lowercase()) {
+            "easy" -> 0.78f
+            "hard" -> 1.15f
+            "legendary" -> 1.28f
+            else -> 1.0f
+        }
 
         for (player in players) {
             // Skip user-controlled player (they are controlled by Virtual Joystick!)
@@ -45,14 +54,14 @@ class GameAiController {
                 // Opponent AI
                 if (ball.ownerPlayerId == player.id) {
                     // This AI player has the ball: Dribble or Pass or Shoot!
-                    updateAiBallCarrier(dt, player, ball, players, awayGoalTarget)
+                    updateAiBallCarrier(dt, player, ball, players, awayGoalTarget, speedMultiplier)
                 } else if (gameState.possessionTeam == player.teamSide) {
                     // AI team is attacking, make supporting runs
                     val target = player.baseFormationSlot + Vector2D(-50f + (ball.position.x * 0.1f), 0f)
-                    moveTowards(dt, player, target, isSprint = false)
+                    moveTowards(dt, player, target, isSprint = false, speedMultiplier = speedMultiplier)
                 } else {
                     // AI team is defending: Press or Mark
-                    updateAiDefending(dt, player, ball, players)
+                    updateAiDefending(dt, player, ball, players, speedMultiplier)
                 }
             } else if (isTeammateOfUser) {
                 // User's teammates (controlled by AI)
@@ -93,12 +102,19 @@ class GameAiController {
         player: GamePlayer,
         ball: GameBall,
         allPlayers: List<GamePlayer>,
-        goalTarget: Vector2D
+        goalTarget: Vector2D,
+        speedMultiplier: Float = 1.0f
     ) {
         val distToGoal = player.position.distanceTo(goalTarget)
+        val shootThreshold = when (difficulty.lowercase()) {
+            "easy" -> 220f
+            "hard" -> 320f
+            "legendary" -> 360f
+            else -> 280f
+        }
 
         // Shoot if near the box!
-        if (distToGoal < 280f && Random.nextInt(100) < 6) {
+        if (distToGoal < shootThreshold && Random.nextInt(100) < (if (difficulty.equals("legendary", true)) 12 else 6)) {
             val shotDir = (goalTarget - player.position).normalized()
             val shotPower = 380f + (player.shooting * 2.2f)
             ball.kick(shotDir, shotPower, loftAngle = 80f)
@@ -126,14 +142,15 @@ class GameAiController {
         }
 
         // Otherwise dribble towards goal
-        moveTowards(dt, player, goalTarget, isSprint = true)
+        moveTowards(dt, player, goalTarget, isSprint = true, speedMultiplier = speedMultiplier)
     }
 
     private fun updateAiDefending(
         dt: Float,
         player: GamePlayer,
         ball: GameBall,
-        allPlayers: List<GamePlayer>
+        allPlayers: List<GamePlayer>,
+        speedMultiplier: Float = 1.0f
     ) {
         val distToBall = player.position.distanceTo(ball.position)
 
@@ -142,27 +159,44 @@ class GameAiController {
             .filter { it.teamSide == player.teamSide && it.positionLabel != "GK" }
             .minByOrNull { it.position.distanceTo(ball.position) }?.id == player.id
 
-        if (isClosestToBall && distToBall < 180f) {
-            moveTowards(dt, player, ball.position, isSprint = true)
+        val pressThreshold = when (difficulty.lowercase()) {
+            "easy" -> 130f
+            "hard" -> 210f
+            "legendary" -> 250f
+            else -> 180f
+        }
+
+        if (isClosestToBall && distToBall < pressThreshold) {
+            moveTowards(dt, player, ball.position, isSprint = true, speedMultiplier = speedMultiplier)
 
             if (distToBall < 30f && player.state != PlayerActionState.TACKLING) {
-                player.state = if (Random.nextBoolean()) PlayerActionState.TACKLING else PlayerActionState.SLIDING
-                player.actionTimer = 0.4f
+                val tackleChance = if (difficulty.equals("legendary", true)) 85 else if (difficulty.equals("easy", true)) 30 else 50
+                if (Random.nextInt(100) < tackleChance) {
+                    player.state = if (Random.nextBoolean()) PlayerActionState.TACKLING else PlayerActionState.SLIDING
+                    player.actionTimer = 0.4f
+                }
             }
         } else {
             // Fall back towards base formation
-            moveTowards(dt, player, player.baseFormationSlot, isSprint = false)
+            moveTowards(dt, player, player.baseFormationSlot, isSprint = false, speedMultiplier = speedMultiplier)
         }
     }
 
-    private fun moveTowards(dt: Float, player: GamePlayer, target: Vector2D, isSprint: Boolean) {
+    private fun moveTowards(
+        dt: Float,
+        player: GamePlayer,
+        target: Vector2D,
+        isSprint: Boolean,
+        speedMultiplier: Float = 1.0f
+    ) {
         val dir = target - player.position
         val dist = dir.length()
 
         if (dist > 8f) {
             val normDir = dir.normalized()
             player.facingDirection = normDir
-            val moveSpeed = if (isSprint) player.speed * 1.25f else player.speed * 0.85f
+            val baseSpeed = if (isSprint) player.speed * 1.25f else player.speed * 0.85f
+            val moveSpeed = baseSpeed * speedMultiplier
             player.velocity = normDir * moveSpeed
             player.position = player.position + (player.velocity * dt)
             player.state = if (isSprint) PlayerActionState.SPRINTING else PlayerActionState.RUNNING

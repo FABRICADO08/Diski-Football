@@ -33,9 +33,13 @@ class DiskiAudioAndHaptics(private val context: Context) {
     private val audioScope = CoroutineScope(Dispatchers.Default)
     private val sampleRate = 22050
 
+    var isAudioEnabled: Boolean = true
+    var isHapticsEnabled: Boolean = true
+
     // --- Haptic Feedback Methods ---
 
     fun hapticBallKick() {
+        if (!isHapticsEnabled) return
         try {
             if (vibrator?.hasVibrator() == true) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -49,6 +53,7 @@ class DiskiAudioAndHaptics(private val context: Context) {
     }
 
     fun hapticTackle() {
+        if (!isHapticsEnabled) return
         try {
             if (vibrator?.hasVibrator() == true) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -62,6 +67,7 @@ class DiskiAudioAndHaptics(private val context: Context) {
     }
 
     fun hapticPostHit() {
+        if (!isHapticsEnabled) return
         try {
             if (vibrator?.hasVibrator() == true) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -77,6 +83,7 @@ class DiskiAudioAndHaptics(private val context: Context) {
     }
 
     fun hapticGoalScored() {
+        if (!isHapticsEnabled) return
         try {
             if (vibrator?.hasVibrator() == true) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -93,6 +100,7 @@ class DiskiAudioAndHaptics(private val context: Context) {
     }
 
     fun hapticKasiSkill() {
+        if (!isHapticsEnabled) return
         try {
             if (vibrator?.hasVibrator() == true) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -110,6 +118,7 @@ class DiskiAudioAndHaptics(private val context: Context) {
     // --- Procedural Sound Synthesis Methods ---
 
     fun playKickSound(isHardShot: Boolean = false) {
+        if (!isAudioEnabled) return
         audioScope.launch {
             val durationMs = if (isHardShot) 90 else 60
             val numSamples = (sampleRate * (durationMs / 1000f)).toInt()
@@ -129,6 +138,7 @@ class DiskiAudioAndHaptics(private val context: Context) {
     }
 
     fun playWhistleSound(isDoubleBlast: Boolean = false) {
+        if (!isAudioEnabled) return
         audioScope.launch {
             val blastDurationMs = if (isDoubleBlast) 180 else 240
             val numSamples = (sampleRate * (blastDurationMs / 1000f)).toInt()
@@ -159,6 +169,7 @@ class DiskiAudioAndHaptics(private val context: Context) {
     }
 
     fun playPostHitSound() {
+        if (!isAudioEnabled) return
         audioScope.launch {
             val durationMs = 150
             val numSamples = (sampleRate * (durationMs / 1000f)).toInt()
@@ -178,6 +189,7 @@ class DiskiAudioAndHaptics(private val context: Context) {
     }
 
     fun playKasiFlavourSound() {
+        if (!isAudioEnabled) return
         audioScope.launch {
             val durationMs = 160
             val numSamples = (sampleRate * (durationMs / 1000f)).toInt()
@@ -196,6 +208,7 @@ class DiskiAudioAndHaptics(private val context: Context) {
     }
 
     fun playGoalRoar() {
+        if (!isAudioEnabled) return
         audioScope.launch {
             val durationMs = 600
             val numSamples = (sampleRate * (durationMs / 1000f)).toInt()
