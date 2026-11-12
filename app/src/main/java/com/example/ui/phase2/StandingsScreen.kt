@@ -323,22 +323,52 @@ private fun TableRow(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // Team Name & Badge
-            Row(
-                modifier = Modifier.weight(1f),
-                verticalAlignment = Alignment.CenterVertically
+            // Team Name, Badge & Recent Match History Form
+            Column(
+                modifier = Modifier.weight(1f)
             ) {
-                team?.let {
-                    DiskiClubBadge(team = it, size = 22.dp)
-                    Spacer(modifier = Modifier.width(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    team?.let {
+                        DiskiClubBadge(team = it, size = 20.dp)
+                        Spacer(modifier = Modifier.width(6.dp))
+                    }
+                    Text(
+                        text = standing.teamShortName.ifBlank { team?.shortName ?: standing.teamId },
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary,
+                        maxLines = 1
+                    )
                 }
-                Text(
-                    text = team?.shortName ?: standing.teamId,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary,
-                    maxLines = 1
-                )
+                if (standing.formList.isNotEmpty()) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(3.dp),
+                        modifier = Modifier.padding(top = 2.dp)
+                    ) {
+                        standing.formList.takeLast(5).forEach { result ->
+                            val (bg, label) = when (result.uppercase()) {
+                                "W" -> Color(0xFF00C853) to "W"
+                                "D" -> Color(0xFFFFB300) to "D"
+                                "L" -> Color(0xFFD50000) to "L"
+                                else -> Color.Gray to result
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .size(13.dp)
+                                    .clip(CircleShape)
+                                    .background(bg),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = label,
+                                    fontSize = 8.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = Color.White
+                                )
+                            }
+                        }
+                    }
+                }
             }
 
             // Stats columns

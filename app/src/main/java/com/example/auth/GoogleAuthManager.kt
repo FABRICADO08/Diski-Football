@@ -14,13 +14,17 @@ import com.google.firebase.auth.GoogleAuthProvider
 import kotlinx.coroutines.tasks.await
 
 class GoogleAuthManager(private val context: Context) {
-    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
-    private val credentialManager = CredentialManager.create(context)
+    private val auth: FirebaseAuth by lazy { FirebaseAuth.getInstance() }
+    private val credentialManager by lazy { CredentialManager.create(context) }
 
     val currentUser: FirebaseUser?
-        get() = auth.currentUser
+        get() = try {
+            auth.currentUser
+        } catch (_: Exception) {
+            null
+        }
 
-    fun isUserSignedIn(): Boolean = auth.currentUser != null
+    fun isUserSignedIn(): Boolean = currentUser != null
 
     suspend fun signInWithGoogle(): Result<FirebaseUser> {
         return try {

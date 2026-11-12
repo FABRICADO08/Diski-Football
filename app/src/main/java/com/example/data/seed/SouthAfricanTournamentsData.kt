@@ -1,5 +1,6 @@
 package com.example.data.seed
 
+import com.example.data.model.LeagueTableEntity
 import com.example.data.model.MatchEntity
 import com.example.data.model.MatchStatus
 import com.example.data.model.StandingEntity
@@ -86,7 +87,10 @@ object SouthAfricanTournamentsData {
                 goalsAgainst = 0,
                 goalDifference = 0,
                 points = 0,
-                position = index + 1
+                position = index + 1,
+                teamName = team.name,
+                teamShortName = team.shortName,
+                matchHistory = ""
             )
         }
 
@@ -104,11 +108,65 @@ object SouthAfricanTournamentsData {
                 goalsAgainst = 0,
                 goalDifference = 0,
                 points = 0,
-                position = index + 1
+                position = index + 1,
+                teamName = team.name,
+                teamShortName = team.shortName,
+                matchHistory = ""
             )
         }
 
         return pslStandings + nfdStandings
+    }
+
+    fun generateInitialLeagueTables(teams: List<TeamEntity>): List<LeagueTableEntity> {
+        val pslTeams = teams.filter { it.league == com.example.data.model.LeagueType.PSL }
+        val nfdTeams = teams.filter { it.league == com.example.data.model.LeagueType.NFD }
+
+        val pslTable = pslTeams.mapIndexed { index, team ->
+            LeagueTableEntity(
+                id = "PSL_2026_${team.id}",
+                league = com.example.data.model.LeagueType.PSL,
+                tournamentType = TournamentType.PSL,
+                teamId = team.id,
+                teamName = team.name,
+                teamShortName = team.shortName,
+                seasonYear = 2026,
+                played = 0,
+                won = 0,
+                drawn = 0,
+                lost = 0,
+                goalsFor = 0,
+                goalsAgainst = 0,
+                goalDifference = 0,
+                points = 0,
+                position = index + 1,
+                matchHistory = ""
+            )
+        }
+
+        val nfdTable = nfdTeams.mapIndexed { index, team ->
+            LeagueTableEntity(
+                id = "NFD_2026_${team.id}",
+                league = com.example.data.model.LeagueType.NFD,
+                tournamentType = TournamentType.NFD,
+                teamId = team.id,
+                teamName = team.name,
+                teamShortName = team.shortName,
+                seasonYear = 2026,
+                played = 0,
+                won = 0,
+                drawn = 0,
+                lost = 0,
+                goalsFor = 0,
+                goalsAgainst = 0,
+                goalDifference = 0,
+                points = 0,
+                position = index + 1,
+                matchHistory = ""
+            )
+        }
+
+        return pslTable + nfdTable
     }
 
     fun generateInitialFixtures(teams: List<TeamEntity>): List<MatchEntity> {

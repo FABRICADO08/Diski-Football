@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SportsSoccer
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material.icons.filled.CurrencyExchange
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -307,6 +308,30 @@ fun MainMenuScreen(
                 icon = Icons.Default.Star,
                 iconTint = DiskiGold,
                 testTag = "btn_career_mode",
+                onClick = {
+                    if (activeCareer != null) {
+                        onNavigate(ScreenRoute.CAREER_DASHBOARD)
+                    } else {
+                        onNavigate(ScreenRoute.NEW_CAREER_SELECT)
+                    }
+                }
+            )
+        }
+
+        // Transfer Market Hub (Buying & Selling of Players)
+        item {
+            MenuModeCard(
+                title = "Transfer Window: Buy & Sell",
+                subtitle = if (activeCareer != null) {
+                    "Scout PSL & NFD star targets, negotiate buy contracts, and accept lucrative rival bids for your squad players."
+                } else {
+                    "Start a managerial career with your chosen club to unlock full player buying, selling, and transfer budget management."
+                },
+                badge = if (activeCareer != null) "Window Open" else "Manager Mode",
+                badgeColor = if (activeCareer != null) PitchGreen else DiskiGold,
+                icon = Icons.Default.CurrencyExchange,
+                iconTint = DiskiGold,
+                testTag = "btn_transfer_market_menu",
                 onClick = {
                     if (activeCareer != null) {
                         onNavigate(ScreenRoute.CAREER_DASHBOARD)

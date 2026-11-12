@@ -38,4 +38,12 @@ class Converters {
     fun toMatchStatus(value: String?): MatchStatus? = value?.let {
         try { MatchStatus.valueOf(it) } catch (e: Exception) { MatchStatus.SCHEDULED }
     }
+
+    @TypeConverter
+    fun fromStringList(value: List<String>?): String? = value?.joinToString(",")
+
+    @TypeConverter
+    fun toStringList(value: String?): List<String>? = value?.let {
+        if (it.isBlank()) emptyList() else it.split(",").map { s -> s.trim() }.filter { s -> s.isNotEmpty() }
+    }
 }

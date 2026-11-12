@@ -30,6 +30,11 @@ import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.SportsSoccer
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.filled.MonetizationOn
+import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.Sell
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -89,12 +94,14 @@ fun ManagerDashboardScreen(
     squad: List<PlayerEntity>,
     nextMatch: MatchEntity?,
     marketPlayers: List<PlayerEntity>,
+    allTeams: List<TeamEntity> = emptyList(),
     onBack: () -> Unit,
     onSimulateNextMatch: () -> Unit,
     onPlayNextMatch: () -> Unit = {},
     onChangeFormation: (String) -> Unit,
     onSwapStarter: (String, String) -> Unit,
     onBuyPlayer: (PlayerEntity) -> Unit,
+    onSellPlayer: (PlayerEntity, String, Long) -> Unit = { _, _, _ -> },
     modifier: Modifier = Modifier
 ) {
     BackHandler { onBack() }
@@ -219,11 +226,15 @@ fun ManagerDashboardScreen(
                     )
                 }
                 3 -> {
-                    // Transfer Market
+                    // Transfer Market: Buy & Sell
                     TransfersTabContent(
+                        squad = squad,
                         marketPlayers = marketPlayers,
+                        allTeams = allTeams,
+                        currentTeam = team,
                         budgetRemaining = career.transferBudgetRemaining,
-                        onBuyPlayer = onBuyPlayer
+                        onBuyPlayer = onBuyPlayer,
+                        onSellPlayer = onSellPlayer
                     )
                 }
             }
@@ -747,73 +758,621 @@ private fun SquadPlayerRow(
 
 @Composable
 private fun TransfersTabContent(
+    squad: List<PlayerEntity>,
     marketPlayers: List<PlayerEntity>,
+    allTeams: List<TeamEntity>,
+    currentTeam: TeamEntity,
     budgetRemaining: Long,
-    onBuyPlayer: (PlayerEntity) -> Unit
+    onBuyPlayer: (PlayerEntity) -> Unit,
+    onSellPlayer: (PlayerEntity, String, Long) -> Unit
 ) {
+    var transferMode by remember { mutableIntStateOf(0) } // 0: Buy Scout Targets, 1: Sell Squad Players
+    var selectedPositionFilter by remember { mutableStateOf("ALL") }
+    var playerToSell by remember { mutableStateOf<PlayerEntity?>(null) }
+    var playerToBuyDetails by remember { mutableStateOf<PlayerEntity?>(null) }
+
+    val positionFilters = listOf("ALL", "GK", "DEF", "MID", "ATT")
+
+    // Filtered lists
+    val filteredMarket = marketPlayers.filter { player ->
+        when (selectedPositionFilter) {
+            "GK" -> player.position.group == "Goalkeeper"
+            "DEF" -> player.position.group == "Defender"
+            "MID" -> player.position.group == "Midfielder"
+            "ATT" -> player.position.group == "Attacker"
+            else -> true
+        }
+    }
+
+    val filteredSquad = squad.filter { player ->
+        when (selectedPositionFilter) {
+            "GK" -> player.position.group == "Goalkeeper"
+            "DEF" -> player.position.group == "Defender"
+            "MID" -> player.position.group == "Midfielder"
+            "ATT" -> player.position.group == "Attacker"
+            else -> true
+        }
+    }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        // Transfer Budget Header Card
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = PitchGreenDark),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(14.dp)
             ) {
                 Row(
-                    modifier = Modifier.padding(14.dp),
+                    modifier = Modifier.padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column {
-                        Text(text = "TRANSFER BUDGET REMAINING", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TextSecondary)
-                        Text(text = "R ${(budgetRemaining / 1_000_000)}M", fontSize = 18.sp, fontWeight = FontWeight.Black, color = DiskiGold)
+                        Text(
+                            text = "CLUB TRANSFER BUDGET",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextSecondary
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "R ${(budgetRemaining / 1_000_000)}M",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Black,
+                            color = DiskiGold
+                        )
+                        Text(
+                            text = "Wage Budget: R ${(currentTeam.wageBudget / 1_000)}k/wk • Squad: ${squad.size} Players",
+                            fontSize = 10.sp,
+                            color = TextMuted
+                        )
                     }
-                    Icon(imageVector = Icons.Default.AttachMoney, contentDescription = null, tint = DiskiGold, modifier = Modifier.size(32.dp))
-                }
-            }
-        }
-
-        item {
-            Text(text = "SCOUTED TARGETS (AVAILABLE PLAYERS)", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = DiskiGold)
-        }
-
-        items(marketPlayers) { player ->
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = SurfaceCard),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                        Surface(shape = RoundedCornerShape(6.dp), color = SurfaceCardHighlight) {
-                            Text(text = player.position.name, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = DiskiGold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Column {
-                            Text(text = player.name, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = TextPrimary)
-                            Text(text = "OVR: ${player.overall} • Age: ${player.age} • Fee: R ${(player.marketValue / 1_000_000)}M", fontSize = 11.sp, color = TextSecondary)
-                        }
-                    }
-
-                    Button(
-                        onClick = { onBuyPlayer(player) },
-                        enabled = budgetRemaining >= player.marketValue,
-                        colors = ButtonDefaults.buttonColors(containerColor = PitchGreen),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.testTag("buy_player_${player.id}")
+                    Surface(
+                        shape = CircleShape,
+                        color = DiskiGold.copy(alpha = 0.2f),
+                        modifier = Modifier.size(46.dp)
                     ) {
-                        Text("Sign Player", fontSize = 11.sp, color = if (budgetRemaining >= player.marketValue) DiskiGold else TextMuted, fontWeight = FontWeight.Bold)
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.MonetizationOn,
+                                contentDescription = null,
+                                tint = DiskiGold,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
                     }
                 }
             }
         }
+
+        // Sub-Navigation: Buy Targets vs Sell Squad
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(SurfaceCardHighlight)
+                    .padding(4.dp)
+            ) {
+                Button(
+                    onClick = { transferMode = 0 },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (transferMode == 0) PitchGreen else Color.Transparent
+                    ),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag("tab_transfer_buy")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ShoppingCart,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = if (transferMode == 0) DiskiGold else TextSecondary
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Buy Targets (${marketPlayers.size})",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (transferMode == 0) DiskiGold else TextSecondary
+                    )
+                }
+
+                Button(
+                    onClick = { transferMode = 1 },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (transferMode == 1) AccentOrange else Color.Transparent
+                    ),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag("tab_transfer_sell")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Sell,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = if (transferMode == 1) Color.White else TextSecondary
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Sell Players (${squad.size})",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (transferMode == 1) Color.White else TextSecondary
+                    )
+                }
+            }
+        }
+
+        // Position Filter Chips
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                positionFilters.forEach { pos ->
+                    val isSelected = selectedPositionFilter == pos
+                    FilterChip(
+                        selected = isSelected,
+                        onClick = { selectedPositionFilter = pos },
+                        label = { Text(pos, fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = DiskiGold,
+                            selectedLabelColor = SurfaceDark,
+                            containerColor = SurfaceCard,
+                            labelColor = TextSecondary
+                        ),
+                        border = null,
+                        modifier = Modifier.testTag("filter_pos_$pos")
+                    )
+                }
+            }
+        }
+
+        // Transfer List Section
+        if (transferMode == 0) {
+            // BUY MODE
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "SCOUTED LEAGUE TARGETS",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = DiskiGold
+                    )
+                    Text(
+                        text = "${filteredMarket.size} Available",
+                        fontSize = 11.sp,
+                        color = TextMuted
+                    )
+                }
+            }
+
+            if (filteredMarket.isEmpty()) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = SurfaceCard),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(text = "No players found matching filter", color = TextSecondary)
+                        }
+                    }
+                }
+            }
+
+            items(filteredMarket) { player ->
+                val sellerClub = allTeams.find { it.id == player.teamId }
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable { playerToBuyDetails = player },
+                    colors = CardDefaults.cardColors(containerColor = SurfaceCard)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Surface(shape = RoundedCornerShape(6.dp), color = SurfaceCardHighlight) {
+                                Text(
+                                    text = player.position.name,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = DiskiGold,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = player.name,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp,
+                                        color = TextPrimary
+                                    )
+                                    if (sellerClub != null) {
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = "(${sellerClub.shortName})",
+                                            fontSize = 10.sp,
+                                            color = TextSecondary
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = "OVR: ${player.overall} • Age: ${player.age} • Wage: R ${(player.weeklyWage / 1_000)}k/wk",
+                                    fontSize = 10.sp,
+                                    color = TextSecondary
+                                )
+                                Text(
+                                    text = "Fee: R ${(player.marketValue / 1_000_000)}M",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (budgetRemaining >= player.marketValue) RatingHigh else AccentRed
+                                )
+                            }
+                        }
+
+                        Button(
+                            onClick = { onBuyPlayer(player) },
+                            enabled = budgetRemaining >= player.marketValue,
+                            colors = ButtonDefaults.buttonColors(containerColor = PitchGreen),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.testTag("buy_player_${player.id}")
+                        ) {
+                            Text(
+                                "Sign",
+                                fontSize = 11.sp,
+                                color = if (budgetRemaining >= player.marketValue) DiskiGold else TextMuted,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            }
+        } else {
+            // SELL MODE
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "YOUR SQUAD ROSTER (SELECT TO SELL)",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = AccentOrange
+                    )
+                    Text(
+                        text = "${filteredSquad.size} Players",
+                        fontSize = 11.sp,
+                        color = TextMuted
+                    )
+                }
+            }
+
+            if (filteredSquad.isEmpty()) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = SurfaceCard),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(text = "No squad players matching filter", color = TextSecondary)
+                        }
+                    }
+                }
+            }
+
+            items(filteredSquad) { player ->
+                val canSell = squad.size > 14 // Keep minimum squad depth
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp)),
+                    colors = CardDefaults.cardColors(containerColor = SurfaceCard)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = if (player.isStartingEleven) PitchGreen.copy(alpha = 0.5f) else SurfaceCardHighlight
+                            ) {
+                                Text(
+                                    text = if (player.isStartingEleven) "XI • ${player.position.name}" else player.position.name,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (player.isStartingEleven) DiskiGold else TextSecondary,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    text = player.name,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
+                                    color = TextPrimary
+                                )
+                                Text(
+                                    text = "OVR: ${player.overall} • Age: ${player.age} • #${player.jerseyNumber}",
+                                    fontSize = 10.sp,
+                                    color = TextSecondary
+                                )
+                                Text(
+                                    text = "Est. Transfer Value: R ${(player.marketValue / 1_000_000)}M",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = DiskiGold
+                                )
+                            }
+                        }
+
+                        Button(
+                            onClick = { playerToSell = player },
+                            enabled = canSell,
+                            colors = ButtonDefaults.buttonColors(containerColor = AccentOrange),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.testTag("sell_player_${player.id}")
+                        ) {
+                            Text(
+                                "Sell",
+                                fontSize = 11.sp,
+                                color = if (canSell) Color.White else TextMuted,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Sell Player Dialog with Club Bids
+    playerToSell?.let { player ->
+        val otherClubs = allTeams.filter { it.id != currentTeam.id }
+        val buyer1 = otherClubs.getOrNull(0) ?: TeamEntity(
+            id = "mamelodi_sundowns",
+            name = "Mamelodi Sundowns",
+            shortName = "Sundowns",
+            abbreviation = "MSFC",
+            nickname = "Brazilians",
+            league = com.example.data.model.LeagueType.PSL,
+            stadiumName = "Loftus",
+            stadiumCapacity = 50000,
+            city = "Pretoria",
+            province = "Gauteng",
+            primaryColorHex = "#FFD700",
+            secondaryColorHex = "#0033A0",
+            kitHomeJerseyHex = "#FFD700",
+            kitHomeShortsHex = "#0033A0",
+            kitAwayJerseyHex = "#FFFFFF",
+            kitAwayShortsHex = "#FFFFFF",
+            ratingOverall = 82,
+            ratingAttack = 83,
+            ratingMidfield = 84,
+            ratingDefense = 80,
+            transferBudget = 100_000_000L,
+            wageBudget = 2_000_000L,
+            prestige = 5
+        )
+        val buyer2 = otherClubs.getOrNull(1) ?: buyer1
+        val buyer3 = otherClubs.getOrNull(2) ?: buyer1
+
+        // 3 offer tiers (Market, Premium 115%, Quick Sale 90%)
+        val offer1 = player.marketValue
+        val offer2 = (player.marketValue * 1.15).toLong()
+        val offer3 = (player.marketValue * 0.90).toLong()
+
+        AlertDialog(
+            onDismissRequest = { playerToSell = null },
+            title = {
+                Text(
+                    text = "Transfer Offers for ${player.name}",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = DiskiGold
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = "Position: ${player.position.name} • OVR: ${player.overall} • Age: ${player.age}",
+                        fontSize = 11.sp,
+                        color = TextSecondary
+                    )
+                    Text(
+                        text = "Select an interested club offer to accept transfer fee into your budget:",
+                        fontSize = 12.sp,
+                        color = TextPrimary
+                    )
+
+                    // Bid Option 1
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                onSellPlayer(player, buyer1.id, offer1)
+                                playerToSell = null
+                            },
+                        colors = CardDefaults.cardColors(containerColor = SurfaceCardHighlight),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                Text(buyer1.name, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = TextPrimary)
+                                Text("Market Valuation Bid", fontSize = 10.sp, color = TextSecondary)
+                            }
+                            Text(
+                                "R ${(offer1 / 1_000_000)}M",
+                                fontWeight = FontWeight.Black,
+                                fontSize = 13.sp,
+                                color = DiskiGold
+                            )
+                        }
+                    }
+
+                    // Bid Option 2 (Premium Offer)
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                onSellPlayer(player, buyer2.id, offer2)
+                                playerToSell = null
+                            },
+                        colors = CardDefaults.cardColors(containerColor = SurfaceCardHighlight),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                Text(buyer2.name, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = TextPrimary)
+                                Text("Premium +15% War Chest", fontSize = 10.sp, color = RatingHigh)
+                            }
+                            Text(
+                                "R ${(offer2 / 1_000_000)}M",
+                                fontWeight = FontWeight.Black,
+                                fontSize = 13.sp,
+                                color = RatingHigh
+                            )
+                        }
+                    }
+
+                    // Bid Option 3 (Quick Deal)
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                onSellPlayer(player, buyer3.id, offer3)
+                                playerToSell = null
+                            },
+                        colors = CardDefaults.cardColors(containerColor = SurfaceCardHighlight),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                Text(buyer3.name, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = TextPrimary)
+                                Text("Instant Cash Deal", fontSize = 10.sp, color = TextMuted)
+                            }
+                            Text(
+                                "R ${(offer3 / 1_000_000)}M",
+                                fontWeight = FontWeight.Black,
+                                fontSize = 13.sp,
+                                color = TextPrimary
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                Button(
+                    onClick = { playerToSell = null },
+                    colors = ButtonDefaults.buttonColors(containerColor = SurfaceCard)
+                ) {
+                    Text("Decline All", color = TextSecondary)
+                }
+            },
+            containerColor = SurfaceDark
+        )
+    }
+
+    // Player Details Dialog when tapping a scout target
+    playerToBuyDetails?.let { target ->
+        AlertDialog(
+            onDismissRequest = { playerToBuyDetails = null },
+            title = {
+                Text(
+                    text = "${target.name} (#${target.jerseyNumber})",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = DiskiGold
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Position: ${target.position.name} (${target.position.group})", color = TextPrimary)
+                    Text("Age: ${target.age} • Foot: ${target.preferredFoot}", color = TextSecondary)
+                    Text("Pace: ${target.pace} • Shooting: ${target.shooting} • Passing: ${target.passing}", color = TextSecondary)
+                    Text("Dribbling: ${target.dribbling} • Defending: ${target.defending} • Physical: ${target.physical}", color = TextSecondary)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        "Market Fee: R ${(target.marketValue / 1_000_000)}M • Wage: R ${(target.weeklyWage / 1_000)}k/wk",
+                        fontWeight = FontWeight.Bold,
+                        color = DiskiGold
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onBuyPlayer(target)
+                        playerToBuyDetails = null
+                    },
+                    enabled = budgetRemaining >= target.marketValue,
+                    colors = ButtonDefaults.buttonColors(containerColor = PitchGreen)
+                ) {
+                    Text("Sign Player")
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = { playerToBuyDetails = null },
+                    colors = ButtonDefaults.buttonColors(containerColor = SurfaceCard)
+                ) {
+                    Text("Close", color = TextSecondary)
+                }
+            },
+            containerColor = SurfaceDark
+        )
     }
 }

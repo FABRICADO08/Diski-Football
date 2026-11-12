@@ -152,16 +152,37 @@ fun SchemaOverview(
 
         item {
             EntityCard(
+                name = "LeagueTableEntity (@Entity 'league_tables')",
+                description = "Dedicated PSL and NFD league tables schema with team names, points, goal difference, and match history form.",
+                schemaFields = listOf(
+                    "id: String (PK: '\${league}_\${seasonYear}_\${teamId}')",
+                    "league: LeagueType ('PSL' | 'NFD')",
+                    "tournamentType: TournamentType",
+                    "teamId: String (FK to teams.id)",
+                    "teamName: String (e.g. 'Mamelodi Sundowns')",
+                    "teamShortName: String (e.g. 'Sundowns')",
+                    "seasonYear: Int = 2026",
+                    "played: Int, won: Int, drawn: Int, lost: Int",
+                    "goalsFor: Int, goalsAgainst: Int, goalDifference: Int",
+                    "points: Int, position: Int",
+                    "matchHistory: String (e.g. 'W,D,W,L,W' last 5 matches form)"
+                )
+            )
+        }
+
+        item {
+            EntityCard(
                 name = "StandingEntity (@Entity 'standings')",
-                description = "League tables and Play-off mini-league standings with auto points/GD calculation.",
+                description = "League tables and Play-off mini-league standings with auto points/GD calculation and match history.",
                 schemaFields = listOf(
                     "id: String (PK: '\${type}_\${season}_\${teamId}')",
-                    "teamId: String",
+                    "teamId: String, teamName: String, teamShortName: String",
                     "tournamentType: TournamentType",
                     "season: Int",
                     "played: Int, won: Int, drawn: Int, lost: Int",
                     "goalsFor: Int, goalsAgainst: Int, goalDifference: Int",
-                    "points: Int, position: Int"
+                    "points: Int, position: Int",
+                    "matchHistory: String ('W,D,W,L,W')"
                 )
             )
         }

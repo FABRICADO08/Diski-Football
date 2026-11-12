@@ -6,12 +6,14 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.example.data.dao.CareerSaveDao
+import com.example.data.dao.LeagueTableDao
 import com.example.data.dao.MatchDao
 import com.example.data.dao.PlayerDao
 import com.example.data.dao.StandingDao
 import com.example.data.dao.TeamDao
 import com.example.data.dao.TournamentDao
 import com.example.data.model.CareerSaveEntity
+import com.example.data.model.LeagueTableEntity
 import com.example.data.model.MatchEntity
 import com.example.data.model.PlayerEntity
 import com.example.data.model.StandingEntity
@@ -25,9 +27,10 @@ import com.example.data.model.TournamentEntity
         MatchEntity::class,
         TournamentEntity::class,
         StandingEntity::class,
-        CareerSaveEntity::class
+        CareerSaveEntity::class,
+        LeagueTableEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -38,6 +41,7 @@ abstract class DiskiDatabase : RoomDatabase() {
     abstract fun tournamentDao(): TournamentDao
     abstract fun standingDao(): StandingDao
     abstract fun careerSaveDao(): CareerSaveDao
+    abstract fun leagueTableDao(): LeagueTableDao
 
     companion object {
         @Volatile
@@ -50,7 +54,7 @@ abstract class DiskiDatabase : RoomDatabase() {
                     DiskiDatabase::class.java,
                     "diski_football.db"
                 )
-                    .fallbackToDestructiveMigration()
+                    .fallbackToDestructiveMigration(true)
                     .build()
                 INSTANCE = instance
                 instance

@@ -2,6 +2,7 @@ package com.example.data.repository
 
 import com.example.data.database.DiskiDatabase
 import com.example.data.model.CareerSaveEntity
+import com.example.data.model.LeagueTableEntity
 import com.example.data.model.LeagueType
 import com.example.data.model.MatchEntity
 import com.example.data.model.MatchStatus
@@ -21,7 +22,8 @@ data class DatabaseStats(
     val playerCount: Int,
     val tournamentCount: Int,
     val matchCount: Int,
-    val standingCount: Int
+    val standingCount: Int,
+    val leagueTableCount: Int = 0
 )
 
 class DiskiRepository(private val database: DiskiDatabase) {
@@ -42,7 +44,8 @@ class DiskiRepository(private val database: DiskiDatabase) {
             playerCount = database.playerDao().getPlayerCount(),
             tournamentCount = database.tournamentDao().getTournamentCount(),
             matchCount = database.matchDao().getMatchCount(),
-            standingCount = database.standingDao().getStandingCount()
+            standingCount = database.standingDao().getStandingCount(),
+            leagueTableCount = database.leagueTableDao().getTotalTableCount()
         )
     }
 
@@ -86,13 +89,35 @@ class DiskiRepository(private val database: DiskiDatabase) {
         }
     }
 
+    suspend fun sellPlayer(playerId: String, buyerTeamId: String, transferFee: Long) = withContext(Dispatchers.IO) {
+        val player = database.playerDao().getPlayerById(playerId)
+        val career = database.careerSaveDao().getActiveSave()
+        if (player != null && career != null) {
+            val updatedCareer = career.copy(
+                transferBudgetRemaining = career.transferBudgetRemaining + transferFee
+            )
+            database.careerSaveDao().updateSave(updatedCareer)
+            database.playerDao().updatePlayer(
+                player.copy(
+                    teamId = buyerTeamId,
+                    isStartingEleven = false,
+                    isCaptain = false
+                )
+            )
+        }
+    }
+
     // Tournaments
     fun getAllTournaments(): Flow<List<TournamentEntity>> = database.tournamentDao().getAllTournamentsFlow()
 
     fun getTournament(type: TournamentType): Flow<TournamentEntity?> = database.tournamentDao().getTournamentFlow(type)
 
-    // Standings
+    // Standings & League Tables
     fun getStandings(type: TournamentType): Flow<List<StandingEntity>> = database.standingDao().getStandingsFlow(type)
+
+    fun getLeagueTable(league: LeagueType): Flow<List<LeagueTableEntity>> = database.leagueTableDao().getTableFlow(league)
+    fun getPslLeagueTable(): Flow<List<LeagueTableEntity>> = database.leagueTableDao().getPslTableFlow()
+    fun getNfdLeagueTable(): Flow<List<LeagueTableEntity>> = database.leagueTableDao().getNfdTableFlow()
 
     // Matches
     fun getMatches(type: TournamentType): Flow<List<MatchEntity>> = database.matchDao().getMatchesByTournamentFlow(type)
@@ -189,42 +214,85 @@ class DiskiRepository(private val database: DiskiDatabase) {
         val homeStanding = database.standingDao().getStandingForTeam(type, homeTeamId)
         val awayStanding = database.standingDao().getStandingForTeam(type, awayTeamId)
 
-        if (homeStanding != null) {
-            val won = if (homeGoals > awayGoals) 1 else 0
-            val drawn = if (homeGoals == awayGoals) 1 else 0
-            val lost = if (homeGoals < awayGoals) 1 else 0
-            val points = (won * 3) + drawn
+        val homeWon = if (homeGoals > awayGoals) 1 else 0
+        val homeDrawn = if (homeGoals == awayGoals) 1 else 0
+        val homeLost = if (homeGoals < awayGoals) 1 else 0
+        val homeOutcome = if (homeWon == 1) "W" else if (homeDrawn == 1) "D" else "L"
 
+        val awayWon = if (awayGoals > homeGoals) 1 else 0
+        val awayDrawn = if (homeGoals == awayGoals) 1 else 0
+        val awayLost = if (awayGoals < homeGoals) 1 else 0
+        val awayOutcome = if (awayWon == 1) "W" else if (awayDrawn == 1) "D" else "L"
+
+        if (homeStanding != null) {
+            val newHomeHistory = (homeStanding.formList + homeOutcome).takeLast(5).joinToString(",")
             val updatedHome = homeStanding.copy(
                 played = homeStanding.played + 1,
-                won = homeStanding.won + won,
-                drawn = homeStanding.drawn + drawn,
-                lost = homeStanding.lost + lost,
+                won = homeStanding.won + homeWon,
+                drawn = homeStanding.drawn + homeDrawn,
+                lost = homeStanding.lost + homeLost,
                 goalsFor = homeStanding.goalsFor + homeGoals,
                 goalsAgainst = homeStanding.goalsAgainst + awayGoals,
                 goalDifference = (homeStanding.goalsFor + homeGoals) - (homeStanding.goalsAgainst + awayGoals),
-                points = homeStanding.points + points
+                points = homeStanding.points + (homeWon * 3) + homeDrawn,
+                matchHistory = newHomeHistory
             )
             database.standingDao().upsert(updatedHome)
         }
 
         if (awayStanding != null) {
-            val won = if (awayGoals > homeGoals) 1 else 0
-            val drawn = if (homeGoals == awayGoals) 1 else 0
-            val lost = if (awayGoals < homeGoals) 1 else 0
-            val points = (won * 3) + drawn
-
+            val newAwayHistory = (awayStanding.formList + awayOutcome).takeLast(5).joinToString(",")
             val updatedAway = awayStanding.copy(
                 played = awayStanding.played + 1,
-                won = awayStanding.won + won,
-                drawn = awayStanding.drawn + drawn,
-                lost = awayStanding.lost + lost,
+                won = awayStanding.won + awayWon,
+                drawn = awayStanding.drawn + awayDrawn,
+                lost = awayStanding.lost + awayLost,
                 goalsFor = awayStanding.goalsFor + awayGoals,
                 goalsAgainst = awayStanding.goalsAgainst + homeGoals,
                 goalDifference = (awayStanding.goalsFor + awayGoals) - (awayStanding.goalsAgainst + homeGoals),
-                points = awayStanding.points + points
+                points = awayStanding.points + (awayWon * 3) + awayDrawn,
+                matchHistory = newAwayHistory
             )
             database.standingDao().upsert(updatedAway)
+        }
+
+        // Also update dedicated league_tables entity if PSL or NFD
+        val league = if (type == TournamentType.PSL) LeagueType.PSL else if (type == TournamentType.NFD) LeagueType.NFD else null
+        if (league != null) {
+            val homeEntry = database.leagueTableDao().getEntryForTeam(league, homeTeamId)
+            if (homeEntry != null) {
+                val newHistory = (homeEntry.formList + homeOutcome).takeLast(5).joinToString(",")
+                database.leagueTableDao().insertOrUpdate(
+                    homeEntry.copy(
+                        played = homeEntry.played + 1,
+                        won = homeEntry.won + homeWon,
+                        drawn = homeEntry.drawn + homeDrawn,
+                        lost = homeEntry.lost + homeLost,
+                        goalsFor = homeEntry.goalsFor + homeGoals,
+                        goalsAgainst = homeEntry.goalsAgainst + awayGoals,
+                        goalDifference = (homeEntry.goalsFor + homeGoals) - (homeEntry.goalsAgainst + awayGoals),
+                        points = homeEntry.points + (homeWon * 3) + homeDrawn,
+                        matchHistory = newHistory
+                    )
+                )
+            }
+            val awayEntry = database.leagueTableDao().getEntryForTeam(league, awayTeamId)
+            if (awayEntry != null) {
+                val newHistory = (awayEntry.formList + awayOutcome).takeLast(5).joinToString(",")
+                database.leagueTableDao().insertOrUpdate(
+                    awayEntry.copy(
+                        played = awayEntry.played + 1,
+                        won = awayEntry.won + awayWon,
+                        drawn = awayEntry.drawn + awayDrawn,
+                        lost = awayEntry.lost + awayLost,
+                        goalsFor = awayEntry.goalsFor + awayGoals,
+                        goalsAgainst = awayEntry.goalsAgainst + homeGoals,
+                        goalDifference = (awayEntry.goalsFor + awayGoals) - (awayEntry.goalsAgainst + homeGoals),
+                        points = awayEntry.points + (awayWon * 3) + awayDrawn,
+                        matchHistory = newHistory
+                    )
+                )
+            }
         }
     }
 

@@ -24,5 +24,11 @@ data class StandingEntity(
     val goalsAgainst: Int = 0,
     val goalDifference: Int = 0,
     val points: Int = 0,
-    val position: Int = 1
-)
+    val position: Int = 1,
+    val teamName: String = "",
+    val teamShortName: String = "",
+    val matchHistory: String = ""      // Comma-separated form: "W,D,L,W,W"
+) {
+    val formList: List<String>
+        get() = if (matchHistory.isBlank()) emptyList() else matchHistory.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+}

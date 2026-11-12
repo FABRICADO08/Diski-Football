@@ -17,6 +17,10 @@ class DatabaseInitializer(private val database: DiskiDatabase) {
             Log.d(tag, "Seeding South African football database...")
             seedAllData()
             Log.d(tag, "Database seeding complete!")
+        } else if (database.leagueTableDao().getTotalTableCount() == 0) {
+            val teams = SouthAfricanTeamsData.allTeams
+            val leagueTables = SouthAfricanTournamentsData.generateInitialLeagueTables(teams)
+            database.leagueTableDao().insertAll(leagueTables)
         }
     }
 
@@ -41,6 +45,10 @@ class DatabaseInitializer(private val database: DiskiDatabase) {
         // 4. Standings
         val standings = SouthAfricanTournamentsData.generateInitialStandings(teams)
         database.standingDao().insertAll(standings)
+
+        // 4b. PSL and NFD League Tables
+        val leagueTables = SouthAfricanTournamentsData.generateInitialLeagueTables(teams)
+        database.leagueTableDao().insertAll(leagueTables)
 
         // 5. Initial Fixtures
         val fixtures = SouthAfricanTournamentsData.generateInitialFixtures(teams)

@@ -117,6 +117,25 @@ class MainGameViewModel(application: Application) : AndroidViewModel(application
     private val _selectedTeamSquad = MutableStateFlow<List<PlayerEntity>>(emptyList())
     val selectedTeamSquad: StateFlow<List<PlayerEntity>> = _selectedTeamSquad.asStateFlow()
 
+    // --- ONLINE MULTIPLAYER (1v1 Across Devices) ---
+    val googleAuthManager = GoogleAuthManager(application)
+    val multiplayerRepository = MultiplayerRepository(application)
+
+    private val _currentUser = MutableStateFlow<FirebaseUser?>(googleAuthManager.currentUser)
+    val currentUser: StateFlow<FirebaseUser?> = _currentUser.asStateFlow()
+
+    private val _userProfile = MutableStateFlow<UserProfile?>(null)
+    val userProfile: StateFlow<UserProfile?> = _userProfile.asStateFlow()
+
+    private val _currentOnlineRoom = MutableStateFlow<MatchRoom?>(null)
+    val currentOnlineRoom: StateFlow<MatchRoom?> = _currentOnlineRoom.asStateFlow()
+
+    private val _isOnlineLoading = MutableStateFlow(false)
+    val isOnlineLoading: StateFlow<Boolean> = _isOnlineLoading.asStateFlow()
+
+    private val _onlineError = MutableStateFlow<String?>(null)
+    val onlineError: StateFlow<String?> = _onlineError.asStateFlow()
+
     init {
         viewModelScope.launch {
             repository.initialize()
@@ -215,6 +234,15 @@ class MainGameViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             repository.buyPlayer(player.id, career.selectedTeamId)
             _snackbarMessage.value = "Signed ${player.name} for R ${(player.marketValue / 1_000_000)}M!"
+        }
+    }
+
+    fun sellPlayer(player: PlayerEntity, buyerTeamId: String, transferFee: Long) {
+        val career = activeCareer.value ?: return
+        viewModelScope.launch {
+            repository.sellPlayer(player.id, buyerTeamId, transferFee)
+            val buyerName = allTeams.value.find { it.id == buyerTeamId }?.shortName ?: "rival club"
+            _snackbarMessage.value = "Sold ${player.name} to $buyerName for R ${(transferFee / 1_000_000)}M!"
         }
     }
 
@@ -378,25 +406,6 @@ class MainGameViewModel(application: Application) : AndroidViewModel(application
     fun dismissSnackbar() {
         _snackbarMessage.value = null
     }
-
-    // --- ONLINE MULTIPLAYER (1v1 Across Devices) ---
-    val googleAuthManager = GoogleAuthManager(application)
-    val multiplayerRepository = MultiplayerRepository(application)
-
-    private val _currentUser = MutableStateFlow<FirebaseUser?>(googleAuthManager.currentUser)
-    val currentUser: StateFlow<FirebaseUser?> = _currentUser.asStateFlow()
-
-    private val _userProfile = MutableStateFlow<UserProfile?>(null)
-    val userProfile: StateFlow<UserProfile?> = _userProfile.asStateFlow()
-
-    private val _currentOnlineRoom = MutableStateFlow<MatchRoom?>(null)
-    val currentOnlineRoom: StateFlow<MatchRoom?> = _currentOnlineRoom.asStateFlow()
-
-    private val _isOnlineLoading = MutableStateFlow(false)
-    val isOnlineLoading: StateFlow<Boolean> = _isOnlineLoading.asStateFlow()
-
-    private val _onlineError = MutableStateFlow<String?>(null)
-    val onlineError: StateFlow<String?> = _onlineError.asStateFlow()
 
     fun refreshAuthState() {
         val user = googleAuthManager.currentUser

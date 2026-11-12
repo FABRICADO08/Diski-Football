@@ -132,6 +132,7 @@ fun DiskiApp(
                             squad = userSquad,
                             nextMatch = nextMatch,
                             marketPlayers = marketPlayers,
+                            allTeams = allTeams,
                             onBack = { viewModel.navigateTo(ScreenRoute.MAIN_MENU) },
                             onSimulateNextMatch = { viewModel.simulateNextMatch() },
                             onPlayNextMatch = {
@@ -149,7 +150,8 @@ fun DiskiApp(
                             },
                             onChangeFormation = { viewModel.changeFormation(it) },
                             onSwapStarter = { starterId, subId -> viewModel.swapPlayers(starterId, subId) },
-                            onBuyPlayer = { viewModel.buyPlayer(it) }
+                            onBuyPlayer = { viewModel.buyPlayer(it) },
+                            onSellPlayer = { player, buyerId, fee -> viewModel.sellPlayer(player, buyerId, fee) }
                         )
                     } else {
                         // Fallback to team select if no career
